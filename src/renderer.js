@@ -1,3 +1,8 @@
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 function makeid(length) {
   var result = '';
@@ -52,6 +57,7 @@ class TerminalConsole {
     raveElectronAPI.registerConsole(this);
 
   }
+  
   addItem (text, textType, renderNow=true, dryRun=false) {
     let msg = text;
     let cls = "hljs-comment";
@@ -285,34 +291,7 @@ class TerminalConsole {
   }
 }
 
-
-
-
-$(document).ready(async function() {
-
-  // get basic information from the main process
-
-  appInfo = {
-    rscript_path: undefined,
-    r_version   : undefined,
-    library     : {}
-  };
-  
-  const terminalConsole = new TerminalConsole(
-    document.getElementById("output-terminal"),
-    document.getElementById("input-r-command")
-  );
-  window.terminalConsole = terminalConsole;
-  
-
-  document.getElementById("toggle-terminal").addEventListener("click", () => {
-    if( document.body.classList.contains("terminal-open") ) {
-      document.body.classList.remove("terminal-open");
-    } else {
-      document.body.classList.add("terminal-open");
-    }
-  })
-
+async function updateSystemStatus () {
   try {
 
     // Rscript path & version
@@ -320,13 +299,14 @@ $(document).ready(async function() {
     const rver = await raveElectronAPI.getRVersion();
 
     raveElectronAPI.replaceTextById("output-rscript-path", rscript);
+    // raveElectronAPI.replaceHtmlById("output-rscript-path", "(Not found) Please download R from <a href='https://cran.r-project.org/' target='_blank'>https://cran.r-project.org/</a>");
     raveElectronAPI.replaceHtmlById("output-rscript-path-status", `<span class="badge bg-success">${rver}</span>`);
 
     appInfo.rscript_path = rscript;
     appInfo.r_version = rver;
 
   } catch (error) {
-    raveElectronAPI.replaceTextById("output-rscript-path", "(Not found)");
+    raveElectronAPI.replaceHtmlById("output-rscript-path", "(Not found) Please download R from <a href='https://cran.r-project.org/'>https://cran.r-project.org/</a>");
     raveElectronAPI.replaceHtmlById("output-rscript-path-status", `<span class="badge bg-danger">Unknown</span>`);
   }
 
@@ -358,5 +338,162 @@ $(document).ready(async function() {
   check_package( 'filearray', "output-filearray-version" );
   check_package( 'shidashi', "output-shidashi-version" );
   check_package( 'rpymat', "output-rpymat-version" );
+}
+
+async function launchRAVESession (session_id, args = {}) {
+
+  const externalBrowser = args.externalBrowser === true ? true : false;
+  let port = args.port;
+  if(!port) {
+    const tmp = await raveElectronAPI.evalRIsolate("cat(httpuv::randomPort())", true);
+    port = parseInt(tmp.message);
+  }
+
+  let session_id2 = session_id;
+  if( typeof session_id !== "string" ) {
+    const tmp = await raveElectronAPI.evalRIsolate(
+      `
+      sess <- ravedash::new_session()
+      cat("\n", sess$session_id)
+      `,
+      true
+    );
+    
+    session_id2 = tmp.message.trim().split("\n");
+    session_id2 = session_id2[session_id2.length - 1].trim();
+
+    postRAVESession(session_id2, false);
+  }
+  terminalConsole.addJob(`
+  ravedash::start_session(
+    session = "${session_id2}", port = ${port}, jupyter = FALSE, as_job = FALSE, 
+    launch_browser = FALSE, single_session = ${externalBrowser ? "FALSE" : "TRUE"}
+  )
+  `, ()=>{}, {
+    shutdownServer : false, 
+    isolate : true, 
+    block : false
+  });
+
+  /*
+  raveElectronAPI.evalRIsolate(
+    `
+    ravedash::start_session(
+      session = "${session_id2}", port = ${port}, jupyter = FALSE, as_job = FALSE, 
+      launch_browser = FALSE, single_session = ${externalBrowser ? "FALSE" : "TRUE"}
+    )
+    `,
+    false
+  );
+  */
+
+  const url = `http://127.0.0.1:${port}`;
+
+  await sleep(2000);
+
+  if( externalBrowser ) {
+    raveElectronAPI.openExternalURL(url);
+  } else {
+    window.open(url, "_blank");
+  }
+
+}
+
+function postRAVESession (session_id, append = false) {
+  if(typeof session_id !== "string") { return; }
+
+  const a = document.createElement("a");
+  a.setAttribute("href", "#");
+  a.innerText = session_id;
+  a.addEventListener("click", () => {
+    launchRAVESession(session_id);
+  })
+
+  const li = document.createElement("li");
+  li.appendChild(a);
+  const sessionList = document.getElementById("output-session-list");
+
+  if( append ) {
+    sessionList.appendChild(li);
+  } else {
+    sessionList.insertBefore(li, sessionList.firstChild);
+  }
+  return a;
+}
+
+
+$(document).ready(async function() {
+
+  // get basic information from the main process
+
+  appInfo = {
+    rscript_path: undefined,
+    r_version   : undefined,
+    library     : {}
+  };
+  
+  const terminalConsole = new TerminalConsole(
+    document.getElementById("output-terminal"),
+    document.getElementById("input-r-command")
+  );
+  window.terminalConsole = terminalConsole;
+  
+
+  document.getElementById("toggle-terminal").addEventListener("click", () => {
+    if( document.body.classList.contains("terminal-open") ) {
+      document.body.classList.remove("terminal-open");
+    } else {
+      document.body.classList.add("terminal-open");
+    }
+  })
+
+  document.getElementById("input-install-rave").addEventListener("click", () => {
+    terminalConsole.addJob(
+      `utils::install.packages('ravemanager', repos = 'https://beauchamplab.r-universe.dev')`, 
+      () => {
+        terminalConsole.addJob(
+          "ravemanager::install()",
+          () => {},
+          args = {
+            isolate: true, 
+            shutdownServer: true,
+            caveat: "Installing RAVE & dependencies"
+          }
+        )
+      }, 
+      args = {
+        isolate: true, 
+        shutdownServer: true,
+        caveat: "Preparing: install/update ravemanager"
+      });
+  });
+
+  $("[electron-external-link]").click(function(evt) {
+    evt.preventDefault();
+    const link = $(this).attr("electron-external-link");
+    raveElectronAPI.openExternalURL(link);
+  });
+
+
+  // Update UI components
+  updateSystemStatus();
+
+  
+  raveElectronAPI.evalRIsolate(`cat(sapply(ravedash::list_session(order = "ascend"), "[[", "session_id"), sep = "\n")`)
+    .then((results) => {
+      results.message.split("\n")
+        .filter((session_id) => {
+          return( session_id.trim() !== "" );
+        })
+        .forEach((session_id) => {
+          const session_id2 = session_id.trim();
+          postRAVESession(session_id2, false);
+        })
+    })
+
+    document.getElementById("input-new-session").addEventListener("click", () => {
+      launchRAVESession();
+    })
+  
   
 });

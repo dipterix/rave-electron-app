@@ -45,6 +45,9 @@ contextBridge.exposeInMainWorld('raveElectronAPI', {
     return ipcRenderer.invoke('R:shutdownServer');
   },
 
+  openExternalURL: (url) => {
+    return ipcRenderer.invoke('shell:openExternal', url);
+  },
 
 
   replaceTextById: (elementId, text) => {

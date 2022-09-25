@@ -46,6 +46,7 @@ function runTerminal(command, args = [], block = true) {
                 .join("");
         }
     };
+    const MAX_MESSAGES = 100; 
     const promise = new Promise(function (resolve) {
         const process = spawn(command, args);
         
@@ -56,18 +57,28 @@ function runTerminal(command, args = [], block = true) {
                 data: data,
                 type: "stdout"
             });
+            if( results.messages.length > MAX_MESSAGES ) {
+                results.messages.splice(0, results.messages.length - MAX_MESSAGES);
+            }
+            
         });
         process.stderr.on('data', (data) => {
             results.messages.push({
                 data: data,
                 type: "stderr"
             });
+            if( results.messages.length > MAX_MESSAGES ) {
+                results.messages.splice(0, results.messages.length - MAX_MESSAGES);
+            }
         });
         process.on('error', (err) => {
             results.messages.push({
                 data: err,
                 type: "stderr"
             });
+            if( results.messages.length > MAX_MESSAGES ) {
+                results.messages.splice(0, results.messages.length - MAX_MESSAGES);
+            }
             results.status = "error";
         })
         process.on('close', (code) => {
@@ -92,10 +103,10 @@ function where(program) {
 
     let promise;
     if (process.platform !== "win32") {
-        promise = runTerminal(which, [program], true);
+        promise = runTerminal("which", [program], true);
     } else {
         // TODO
-        promise = runTerminal(where, [program], true);
+        promise = runTerminal("where", [program], true);
     }
 
     return promise;
