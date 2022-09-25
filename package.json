@@ -1,0 +1,43 @@
+{
+  "name": "rave-electron-app",
+  "productName": "rave-electron-app",
+  "version": "1.0.0",
+  "description": "My Electron application description",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron package",
+    "make": "electron make",
+    "publish": "electron publish",
+    "lint": "echo \"No linting configured\""
+  },
+  "keywords": [],
+  "author": {
+    "name": "dipterix",
+    "email": "dipterix.wang@gmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "admin-lte": "^3.2.0",
+    "bootstrap": "^4.6.1",
+    "clipboard": "^2.0.11",
+    "electron-context-menu": "^3.3.0",
+    "electron-json-storage": "^4.5.0",
+    "electron-squirrel-startup": "^1.0.0",
+    "highlight.js": "^11.5.1",
+    "overlayscrollbars": "^1.13.2"
+  },
+  "devDependencies": {
+    "css-loader": "^6.7.1",
+    "electron-nightly": "^22.0.0-nightly.20220922",
+    "electron-settings": "^4.0.2",
+    "electron-store": "^8.1.0",
+    "exports-loader": "^4.0.0",
+    "imports-loader": "^4.0.0",
+    "sass-loader": "^13.0.0",
+    "scss": "^0.2.4",
+    "style-loader": "^3.3.1",
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0"
+  }
+}

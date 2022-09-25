@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+  <title>R Analysis & Visualization of iEEG</title>
+
+  <link href="www/fontawesome/css/all.min.css" rel="stylesheet">
+  <link href="index.css" rel="stylesheet">
+
+  <script src="www/jquery/dist/jquery.min.js"></script>
+  <script src="www/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="www/shidashi/js/shidashi.js"></script>
+  <style>
+    
+    .display-on-terminal-open {
+      display: none !important;
+    }
+    body.terminal-open .display-on-terminal-open {
+      display: initial !important;
+    }
+    body.terminal-open .display-on-terminal-open-flex {
+      display: flex !important;
+    }
+    body.terminal-open .display-off-terminal-open {
+      display: none !important;
+    }
+
+  </style>
+</head>
+
+<body class="parent-frame layout-top-nav navbar-iframe-hidden terminal-open">
+  <div class="wrapper">
+
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand-md navbar-primary border-bottom-0">
+
+      <div class="container">
+        <a href="https://rave.wiki/" class="navbar-brand" target="_blank">
+          <img src="www/shidashi/img/icon.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3"
+            style="opacity: .8">
+          <span class="brand-text font-weight-light">RAVE Control Center</span>
+        </a>
+
+        <!-- Right navbar links -->
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <a class="nav-link action-button" href="#" role="button" id="ravedash_shutdown_btn">
+              <i class="fas fa-power-off"></i>
+            </a>
+          </li>
+          <!--li class="nav-item">
+          <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+            <i class="fas fa-expand-arrows-alt"></i>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-widget="control-sidebar" data-slide="true" href="#" role="button">
+            <i class="fas fa-th-large"></i>
+          </a>
+        </li-->
+        </ul>
+
+      </div>
+
+    </nav>
+    <!-- /.navbar -->
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper" style="min-height: 470px;">
+
+      <div class="content-header">
+        <div class="container">
+          <div class="row mb-2">
+            <div class="col-sm-6">
+              <h1 class="m-0"> Welcome to RAVE ❤</h1>
+            </div>
+            <!--div class="col-sm-6">
+              <ol class="breadcrumb float-sm-right">
+                <li class="breadcrumb-item active">Top Navigation</li>
+              </ol>
+            </div-->
+          </div>
+        </div>
+      </div>
+
+
+      <div class="content">
+        <div class="container">
+          <div class="row">
+            <div class="col-lg-6">
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">Card title</h5>
+                  <p class="card-text">
+                    Some quick example text to build on the card title and make up the bulk of the card's
+                    content.
+                  </p>
+                  <a href="#" class="card-link">Card link</a>
+                  <a href="#" class="card-link">Another link</a>
+                </div>
+              </div>
+              <div class="card card-primary card-outline">
+                <div class="card-body">
+                  <h5 class="card-title">Card title</h5>
+                  <p class="card-text">
+                    Some quick example text to build on the card title and make up the bulk of the card's
+                    content.
+                  </p>
+                  <a href="#" class="card-link">Card link</a>
+                  <a href="#" class="card-link">Another link</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-6">
+              <div class="card">
+                <div class="card-header">
+                  <h5 class="card-title m-0">System Status</h5>
+                </div>
+                <div class="card-body p-0">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Core Program</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Rscript</td>
+                        <td>
+                          <code id="output-rscript-path" class="pt-0 pb-0"></code>
+                          <span id="output-rscript-path-status"></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>RAVE</td>
+                        <td>
+                          <span id="output-rave-version"></span>
+                          <span id="output-ravemanager-version"></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>RAVE Dependencies</td>
+                        <td>
+                          <span id="output-raveio-version"></span>
+                          <span id="output-ravedash-version"></span>
+                          <span id="output-ravetools-version"></span>
+                          <span id="output-ravebuiltins-version"></span>
+                          <span id="output-threeBrain-version"></span>
+                          <span id="output-dipsaus-version"></span>
+                          <span id="output-filearray-version"></span>
+                          <span id="output-rpymat-version"></span>
+                          <span id="output-shidashi-version"></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Fix and squish bugs</td>
+                        <td>
+                          <div class="progress progress-xs progress-striped active">
+                            <div class="progress-bar bg-success" style="width: 90%"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <a href="#" class="btn btn-primary">Go somewhere</a>
+                </div>
+              </div>
+              <div class="card card-primary card-outline">
+                <div class="card-header">
+                  <h5 class="card-title m-0">Featured</h5>
+                </div>
+                <div class="card-body">
+                  <h6 class="card-title">Special title treatment</h6>
+                  <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                  <a href="#" class="btn btn-primary">Go somewhere</a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- /.content-wrapper -->
+  <footer class="main-footer" style="display:none; max-height:0; padding:0;">
+    <strong>Copyright &copy; 2021 <a href="#">website</a>.</strong>
+    All rights reserved.
+    <div class="float-right d-none d-sm-inline-block">
+      <b>Version</b> 0.0.1
+    </div>
+  </footer>
+
+  <!-- Control Sidebar -->
+  <aside class="control-sidebar control-sidebar-dark">
+    <!-- Control sidebar content goes here -->
+  </aside>
+  <!-- /.control-sidebar -->
+  </div>
+  <!-- ./wrapper -->
+
+
+  <footer class="main-footer p-0 position-fixed fill-width" style="bottom: 0;">
+    <div class="pl-2 pr-2" id="toggle-terminal">
+      <span class="float-right">
+        <i class="fa fa-angle-double-down display-on-terminal-open" role="presentation" aria-label="angle-double-down icon"></i>
+        <i class="fa fa-angle-double-up display-off-terminal-open" role="presentation" aria-label="angle-double-up icon"></i>
+      </span>
+      <i class="fa fa-terminal" role="presentation" aria-label="terminal icon"></i> Terminal
+    </div>
+    <!-- Terminal outputs -->
+    <div
+      style="flex-wrap:wrap; justify-content:flex-start; align-content:stretch; align-items:stretch; display:flex; flex-direction: column-reverse"
+      class="fill-width max-height-250 overflow-y-auto display-on-terminal-open display-on-terminal-open-flex">
+      <div style="flex:1" class="fill-width p-0">
+        <pre id="output-terminal" class="pt-0 pb-0 pl-1 pr-1 m-0"></pre>
+      </div>
+    </div>
+    <div class="p-0 display-on-terminal-open">
+      <input id="input-r-command" type="text" class="form-control code" value="" placeholder="Type any R command and hit `Return/Enter`."/>
+    </div>
+  </footer>
+</body>
+
+<script src="./renderer.js"></script>
+
+</html>
