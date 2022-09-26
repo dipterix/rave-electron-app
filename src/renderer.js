@@ -1,3 +1,4 @@
+
 function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -13,6 +14,79 @@ function makeid(length) {
           charactersLength));
   }
   return result;
+}
+
+class Notification {
+  constructor() {}
+
+  showNotification(body, args = {}) {
+    const title = args.title || "RAVE Notification"
+    const useSystem = args.useSystem;
+    const ntype = args.type;
+
+    if( useSystem ) {
+      raveElectronAPI.showNotification(body, title);
+
+      return;
+    } else {
+      const toastId = `toast-notification-${makeid(10)}`;
+
+      let toastClass = "bg-default";
+      if( typeof ntype === "string" ) {
+        switch (ntype) {
+          case "info":
+            toastClass = "bg-info";
+            break;
+          case "success":
+            toastClass = "bg-success";
+            break;
+          case "warning":
+            toastClass = "bg-warning";
+            break;
+          case "error":
+          case "danger":
+            toastClass = "bg-danger";
+            break;
+          case "fatal":
+            toastClass = "bg-maroon";
+            break;
+          default:
+            break;
+        }
+      }
+
+      const toastArgs = {
+        position: typeof args.position === "string" ? args.position : "topRight",
+        fixed: args.fixed === false ? false : true,
+        autohide: args.autohide === false ? false : true,
+        delay : args.delay || 2000,
+        autoremove: true,
+        fade: args.fade === false ? false : true,
+        title : title,
+        subtitle: args.subtitle || null,
+        close: true,
+        body: body,
+        class: `${toastId} ${toastClass} fill-width ${args.class || ""}`,
+      }
+      
+      $(document).Toasts("create", toastArgs );
+
+      return toastId;
+      
+    }
+    
+  }
+
+  hideNotification(toastId) {
+    if( typeof toastId !== "string" || toastId.length == 0 ) {
+      // hide all
+      $(`.toast`).toast('hide');
+    } else {
+      $(`.toast.${toastId}`).toast('hide');
+    }
+    
+  }
+
 }
 
 class TerminalConsole {
@@ -291,7 +365,120 @@ class TerminalConsole {
   }
 }
 
+class ModalDialog {
+  constructor() {
+    this.primaryCallback = null;
+    this.displayCallback = null;
+  }
+
+  ensureModal() {
+    if(this.$wrapper) { return true; }
+    const $wrapper = $("#globalModal.modal");
+    if( $wrapper.length === 0 ) { return false; }
+    this.$wrapper = $wrapper;
+
+    this.$title = this.$wrapper.find("#modal-title");
+    this.$body = this.$wrapper.find("#modal-body");
+    this.$secondaryBtn = this.$wrapper.find("#modal-close-button");
+    this.$primaryBtn = this.$wrapper.find("#modal-confirm-button");
+
+    this.$primaryBtn.on("click", (evt) => {
+      evt.preventDefault();
+      if( typeof this.primaryCallback === "function" ) {
+        this.primaryCallback();
+      }
+      // this.$wrapper.modal("hide");
+    })
+
+    this.$wrapper.on("shown.bs.modal", () => {
+      if( typeof this.displayCallback === "function" ) {
+        this.displayCallback();
+      }
+    })
+    
+
+    return true;
+  }
+
+  removeModal() {
+    if(!this.ensureModal()) { return; }
+    this.$wrapper.modal("hide");
+    this.primaryCallback = null;
+  }
+
+  setPrimaryCallback(callback) {
+    if( typeof callback === "function" ) {
+      this.primaryCallback = callback;
+    } else {
+      this.primaryCallback = null;
+    }
+  }
+
+
+  showModal(title, body, primaryBtn, secondaryBtn, onConfirmed, onShown) {
+    if(!this.ensureModal()) { return; }
+
+    this.$title.text(title);
+    this.$body.html(body);
+
+    let primaryBtnText = "OK";
+    let primaryBtnShow = true;
+    let primaryBtnClass = "btn-primary";
+    if( !primaryBtn ) {
+      primaryBtnShow = false;
+    } else if( typeof primaryBtn === "string" ) {
+      primaryBtnText = primaryBtn;
+    } else {
+      primaryBtnText = primaryBtn.text || primaryBtn.label || "OK";
+      primaryBtnShow = primaryBtn.show === false ? false : true;
+      primaryBtnClass = primaryBtn.class || primaryBtnClass;
+    }
+
+    this.$primaryBtn[0].className = `btn ${primaryBtnShow ? " " : "hidden "}${primaryBtnClass}`;
+    this.$primaryBtn.html(primaryBtnText);
+
+    let secondaryBtnText = "OK";
+    let secondaryBtnShow = true;
+    let secondaryBtnClass = "btn-secondary";
+    if( !secondaryBtn ) {
+      secondaryBtnShow = false;
+    } else if( typeof secondaryBtn === "string" ) {
+      secondaryBtnText = secondaryBtn;
+    } else {
+      secondaryBtnText = secondaryBtn.text || secondaryBtn.label || "OK";
+      secondaryBtnShow = secondaryBtn.show === false ? false : true;
+      secondaryBtnClass = secondaryBtn.class || secondaryBtnClass;
+    }
+
+    this.$secondaryBtn[0].className = `btn ${secondaryBtnShow ? " " : "hidden "}${secondaryBtnClass}`;
+    this.$secondaryBtn.html(secondaryBtnText);
+
+    this.setPrimaryCallback(onConfirmed);
+    if( typeof onShown === "function" ) {
+      this.displayCallback = onShown;
+    } else {
+      this.displayCallback = null;
+    }
+
+    this.$wrapper.modal("show");
+
+  }
+}
+
 async function updateSystemStatus () {
+
+  
+  try {
+
+    // System path
+    const sysPath = await raveElectronAPI.getSystemPath();
+
+    raveElectronAPI.replaceTextById("output-system-path", sysPath.message.split(/[;\:]/g).join("\n"));
+    
+  } catch (error) {
+    raveElectronAPI.replaceHtmlById("output-system-path", error);
+  }
+
   try {
 
     // Rscript path & version
@@ -341,6 +528,15 @@ async function updateSystemStatus () {
 }
 
 async function launchRAVESession (session_id, args = {}) {
+
+  const notifId = notification.showNotification(
+    `Starting RAVE session...`,
+    {
+      title: "RAVE Session Launcher",
+      type: "default",
+      autohide: false
+    }
+  );
 
   const externalBrowser = args.externalBrowser === true ? true : false;
   let port = args.port;
@@ -397,6 +593,17 @@ async function launchRAVESession (session_id, args = {}) {
     window.open(url, "_blank");
   }
 
+  notification.hideNotification(notifId);
+  
+  notification.showNotification(
+    `RAVE session [${session_id2}] has been started at port [${port}].`,
+    {
+      title: "RAVE Session Launcher",
+      type: "info",
+      delay: 5000
+    }
+  );
+
 }
 
 function postRAVESession (session_id, append = false) {
@@ -418,9 +625,135 @@ function postRAVESession (session_id, append = false) {
   } else {
     sessionList.insertBefore(li, sessionList.firstChild);
   }
+
   return a;
 }
 
+function updateSessionList(add = false) {
+  if(!add) {
+    const sessionList = document.getElementById("output-session-list");
+    sessionList.textContent = "";
+  }
+  
+  raveElectronAPI.evalRIsolate(`cat(sapply(ravedash::list_session(order = "ascend"), "[[", "session_id"), sep = "\n")`)
+  .then((results) => {
+    results.message.split("\n")
+      .filter((session_id) => {
+        return( session_id.trim() !== "" );
+      })
+      .forEach((session_id) => {
+        const session_id2 = session_id.trim();
+        postRAVESession(session_id2, false);
+      })
+  });
+}
+
+function installRAVE () {
+  let notifId = notification.showNotification(
+    `Installing RAVE: Upgrading package manager...`,
+    {
+      title: "RAVE Installer",
+      type: "default",
+      autohide: false
+    }
+  );
+
+  terminalConsole.addJob(
+    `
+    if(system.file(package="ravemanager") == "") {
+      utils::install.packages('ravemanager', repos = 'https://beauchamplab.r-universe.dev')
+    } else {
+      ravemanager::upgrade_installer()
+    }
+    `, 
+    () => {
+
+      notification.hideNotification(notifId);
+      notifId = notification.showNotification(
+        `Installing RAVE & core dependencies... It will take a while if this is the first time that you install RAVE`,
+        {
+          title: "RAVE Installer",
+          type: "default",
+          autohide: false
+        }
+      );
+
+      terminalConsole.addJob(
+        "ravemanager::install(finalize = FALSE)",
+        () => {
+
+          notification.hideNotification(notifId);
+          notifId = notification.showNotification(
+            `Installing built-in pipelines... (template brain, Notch filter, Morelet wavelet, Electrode localization, ...)`,
+            {
+              title: "RAVE Installer",
+              type: "default",
+              autohide: false
+            }
+          );
+          terminalConsole.addJob(
+            'ravemanager::finalize_installation(packages = c("raveio", "threeBrain"))',
+            () => {
+
+              notification.hideNotification(notifId);
+              notifId = notification.showNotification(
+                `The RAVE core has been successfully installed. You can start RAVE sessions now while the finalizing script is running...`,
+                {
+                  title: "RAVE Installer",
+                  type: "info",
+                  autohide: false
+                }
+              );
+
+              terminalConsole.addJob(
+                `
+                allPackages <- unique(utils::installed.packages()[,1])
+                allPackages <- allPackages[!allPackages %in% c("raveio", "threeBrain")]
+                ravemanager::finalize_installation(packages = allPackages)
+                `,
+                () => {
+                  notification.hideNotification(notifId);
+                  notifId = notification.showNotification(
+                    `Congratulations, RAVE has been upgraded! <strong>Please restart this application (RAVE control center).</strong>`,
+                    {
+                      title: "RAVE Installer",
+                      type: "success",
+                      autohide: false
+                    }
+                  );
+                },
+                args = {
+                  isolate: true, 
+                  shutdownServer: true,
+                  caveat: "Finalize installations"
+                }
+              )
+            },
+            args = {
+              isolate: true, 
+              shutdownServer: true,
+              caveat: "Install built-in pipelines"
+            }
+          )
+        },
+        args = {
+          isolate: true, 
+          shutdownServer: true,
+          caveat: "Install RAVE & dependencies"
+        }
+      )
+    }, 
+    args = {
+      isolate: true, 
+      shutdownServer: true,
+      caveat: "Install/update ravemanager"
+    }
+  );
+}
+
+
+const notification = new Notification();
+const modal = new ModalDialog();
 
 $(document).ready(async function() {
 
@@ -438,6 +771,7 @@ $(document).ready(async function() {
   );
   window.terminalConsole = terminalConsole;
   
+  $('[data-toggle="popover"]').popover();
 
   document.getElementById("toggle-terminal").addEventListener("click", () => {
     if( document.body.classList.contains("terminal-open") ) {
@@ -447,26 +781,7 @@ $(document).ready(async function() {
     }
   })
 
-  document.getElementById("input-install-rave").addEventListener("click", () => {
-    terminalConsole.addJob(
-      `utils::install.packages('ravemanager', repos = 'https://beauchamplab.r-universe.dev')`, 
-      () => {
-        terminalConsole.addJob(
-          "ravemanager::install()",
-          () => {},
-          args = {
-            isolate: true, 
-            shutdownServer: true,
-            caveat: "Installing RAVE & dependencies"
-          }
-        )
-      }, 
-      args = {
-        isolate: true, 
-        shutdownServer: true,
-        caveat: "Preparing: install/update ravemanager"
-      });
-  });
+  document.getElementById("input-install-rave").addEventListener("click", installRAVE);
 
   $("[electron-external-link]").click(function(evt) {
     evt.preventDefault();
@@ -474,26 +789,49 @@ $(document).ready(async function() {
     raveElectronAPI.openExternalURL(link);
   });
 
+  document.getElementById("input-new-session").addEventListener("click", () => {
+    launchRAVESession();
+  })
+
 
   // Update UI components
   updateSystemStatus();
 
-  
-  raveElectronAPI.evalRIsolate(`cat(sapply(ravedash::list_session(order = "ascend"), "[[", "session_id"), sep = "\n")`)
-    .then((results) => {
-      results.message.split("\n")
-        .filter((session_id) => {
-          return( session_id.trim() !== "" );
-        })
-        .forEach((session_id) => {
-          const session_id2 = session_id.trim();
-          postRAVESession(session_id2, false);
-        })
-    })
+  updateSessionList();
 
-    document.getElementById("input-new-session").addEventListener("click", () => {
-      launchRAVESession();
-    })
-  
+  document.getElementById("input-clear-cache").addEventListener("click", () => {
+
+    
+
+    modal.showModal(
+      title = "Confirmation", body = "This will clean all the RAVE sessions and cached data on the local machine only. If you have running RAVE sessions. Please close them prior to confirmation", 
+      primaryBtn = { label: "Confirm" }, 
+      secondaryBtn = {label: "Cancel"}, 
+      onConfirmed = () => {
+
+        const notifId = notification.showNotification(
+          "Clearing cache files in progress... Please wait...",
+          args = {
+            autohide: false
+          }
+        )
+
+        terminalConsole.addJob(
+          `
+          raveio::clear_cached_files()
+          cat("Done.")
+          `, 
+          () => {
+            notification.hideNotification(notifId);
+            updateSessionList();
+            modal.removeModal();
+          },
+          {
+            isolate: true
+          }
+        )
+      })
+
+  });
   
 });

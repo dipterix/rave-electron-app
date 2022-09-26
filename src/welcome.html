@@ -15,27 +15,30 @@
   <script src="www/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="www/shidashi/js/shidashi.js"></script>
   <style>
-    
     .display-on-terminal-open {
       display: none !important;
     }
+
     body.terminal-open .display-on-terminal-open {
       display: initial !important;
     }
+
     body.terminal-open .display-on-terminal-open-flex {
       display: flex !important;
     }
+
     body.terminal-open .display-off-terminal-open {
       display: none !important;
     }
+
     body.terminal-open .wrapper {
       padding-bottom: 250px;
     }
-
   </style>
 </head>
 
-<body class="parent-frame layout-top-nav navbar-iframe-hidden terminal-open">
+<body class="parent-frame layout-top-nav navbar-iframe-hidden">
+  <!-- to open terminal by default, add class terminal-open -->
   <div class="wrapper">
 
     <!-- Navbar -->
@@ -101,19 +104,23 @@
                 </div>
                 <div class="card-body">
                   <p class="card-text">
-                    Please choose from 
-                    <a data-toggle="collapse" href="#output-session-list" role="button" aria-expanded="false" aria-controls="output-session-list">
+                    Please choose from
+                    <a data-toggle="collapse" href="#output-session-list" role="button" aria-expanded="false"
+                      aria-controls="output-session-list">
                       existing sessions
-                    </a> 
-                    or start a 
+                    </a>
+                    or start a
                     <a href="#" id="input-new-session" role="button">
                       new session...
                     </a>
                   </p>
                   <ul id="output-session-list" class="collapse show overflow-y-auto max-height-250">
                   </ul>
-                  
-                  <a href="#" class="card-link">Another link</a>
+                </div>
+                <div class="card-footer">
+                  <a href="#" id="input-clear-cache" role="button">
+                    Clear all sessions & temporary files to free local disk space
+                  </a>
                 </div>
               </div>
               <div class="card card-primary card-outline">
@@ -144,6 +151,15 @@
                     </thead>
                     <tbody>
                       <tr>
+                        <td>System Path</td>
+                        <td>
+                          <details class="p-0 m-0">
+                            <summary class="p-0 m-0">Details...</summary>
+                            <div id="output-system-path" class="text-small fill-width overflow-y-auto"></div>
+                          </details>
+                        </td>
+                      </tr>
+                      <tr>
                         <td>Rscript</td>
                         <td>
                           <code id="output-rscript-path" class="pt-0 pb-0"></code>
@@ -158,7 +174,7 @@
                         </td>
                       </tr>
                       <tr>
-                        <td>RAVE Dependencies</td>
+                        <td>Dependencies</td>
                         <td>
                           <span id="output-raveio-version"></span>
                           <span id="output-ravedash-version"></span>
@@ -173,7 +189,7 @@
                       </tr>
                     </tbody>
                   </table>
-                  <div class = "p-2 float-right">
+                  <div class="p-2 float-right">
                     <a id="input-install-rave" href="#" class="btn btn-primary">Install/Upgrade RAVE</a>
                   </div>
                 </div>
@@ -204,8 +220,10 @@
   <footer class="main-footer p-0 position-fixed fill-width" style="bottom: 0;">
     <div class="pl-2 pr-2" id="toggle-terminal">
       <span class="float-right">
-        <i class="fa fa-angle-double-down display-on-terminal-open" role="presentation" aria-label="angle-double-down icon"></i>
-        <i class="fa fa-angle-double-up display-off-terminal-open" role="presentation" aria-label="angle-double-up icon"></i>
+        <i class="fa fa-angle-double-down display-on-terminal-open" role="presentation"
+          aria-label="angle-double-down icon"></i>
+        <i class="fa fa-angle-double-up display-off-terminal-open" role="presentation"
+          aria-label="angle-double-up icon"></i>
       </span>
       <i class="fa fa-terminal" role="presentation" aria-label="terminal icon"></i> Terminal
     </div>
@@ -227,10 +245,33 @@
       </div>
     </div>
     <div class="p-0 display-on-terminal-open">
-      <input id="input-r-command" type="text" class="code form-control fill-width text-small rounded-0 pt-0 pb-0" value="" placeholder="Type any R command and hit `Return/Enter`." style="height:1.6rem">
+      <input id="input-r-command" type="text" class="code form-control fill-width text-small rounded-0 pt-0 pb-0"
+        value="" placeholder="Type any R command and hit `Return/Enter`." style="height:1.6rem">
       <!--input id="input-r-command" type="text" class="form-control code" value="" placeholder="Type any R command and hit `Return/Enter`."/-->
     </div>
   </footer>
+
+  <div id="modal-wrapper">
+    <div class="modal fade" id="globalModal" tabindex="-1" role="dialog" aria-labelledby="globalModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modal-title">Modal title</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body" id="modal-body">
+            ...
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="modal-close-button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="button" id="modal-confirm-button" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 <script src="./renderer.js"></script>

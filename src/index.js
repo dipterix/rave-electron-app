@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron');
 const contextMenu = require('electron-context-menu');
 const { rcmd } = require("./utils/system-command");
 const path = require('path');
@@ -37,12 +37,13 @@ function createWindow () {
 
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: true,
       enableRemoteModule: true,
     },
   });
   mainWindow.setWindowButtonVisibility(true);
   mainWindow.setMinimumSize(minWidth, minHeight);
-  mainWindow.setBackgroundColor('#ccff99')
+  // mainWindow.setBackgroundColor('#ccff99')
 
   contextMenu({
     window: mainWindow,
@@ -72,87 +73,21 @@ function createWindow () {
 
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'welcome.html'));
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   mainWindow.on('close', function() {
     console.log("Shutting down R socket server...");
     rcmd.shutdownServer();
   });
   
-
-  
-
-  /*
-  rcmd.run(`shidashi::adminlte_sidebar('/Users/dipterix/Dropbox (PENN Neurotrauma)/dipterix/projects/rave-pipelines')`)
-    .then((results) => {
-      console.log(results);
-    })
-  
-
-
-  /*
-  const view = new BrowserView({
-    webPreferences: {
-      spellcheck: true,
-    },
-  });
-
-  /*
-  // Add an item to the context menu that appears only when you click on an image
-  contextMenu({
-    window: view,
-    prepend: (params, browserWindow) => [
-      {
-        label: 'Rainbow',
-        // Only show it when right-clicking images
-        visible: params.mediaType === 'image'
-      },
-      {
-        role: "zoomIn"
-      },
-      {
-          role: "zoomOut"
-      },
-      {
-        role: "resetZoom"
-      },
-      {
-        role: "editMenu"
-      },
-      {
-        role: "reload"
-      },
-    ]
-  });
-  */
-
-  // mainWindow.addBrowserView(view);
-  // const yPos = 0; // 27;
-  // view.setBounds({ x: 0, y: yPos, width: width, height: height - yPos });
-
-  // mainWindow.on('resize', (evt) => {
-
-  //   // the setTimeout is necessary because it runs after the event listener is handled
-  //   lastHandle = setTimeout(() => {
-  //     if (lastHandle != null) clearTimeout(lastHandle);
-  //     // view.setBounds(view.getBounds());
-  //     const dimensions = mainWindow.getSize();
-  //     view.setBounds({ x: 0, y: yPos, width: dimensions[0], height: dimensions[1] - yPos });
-  //   });
-  // });
-
-
-
-  // view.webContents.loadURL('http://127.0.0.1:17283');
-  // view.webContents.loadFile(path.join(__dirname, 'index.html'));
-  // Open the DevTools.
-  // view.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  
+  ipcMain.handle('R:getSystemPath', rcmd.getSystemPath);
   ipcMain.handle('R:getPathRscript', rcmd.find_rscript);
   ipcMain.handle('R:getVersion', rcmd.version);
   ipcMain.handle('R:getPackageVersion', async (_, arg) => {
@@ -206,6 +141,13 @@ app.whenReady().then(() => {
 
   ipcMain.handle('shell:openExternal', (_, url) => {
     shell.openExternal(url);
+  });
+
+  ipcMain.handle('notification:show', (_, args = {}) => {
+    const body = args.body;
+    if(typeof body !== "string") { return; }
+    const title = args.title || "RAVE Notification";
+    new Notification({ title: title, body: body }).show();
   });
 
   

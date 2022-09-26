@@ -46,13 +46,18 @@ function runTerminal(command, args = [], block = true) {
                 .join("");
         }
     };
-    const MAX_MESSAGES = 100; 
-    const promise = new Promise(function (resolve) {
-        const process = spawn(command, args);
+    const MAX_MESSAGES = 5000; 
+    const promise = new Promise( (resolve) => {
+        const defaultEnv = process.env;
         
-        results.process = process;
+        const env = Object.assign(defaultEnv, {
+            PATH: `${defaultEnv.HOME}/abin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/gfortran/bin:${defaultEnv.PATH}`
+        })
+        const subProcess = spawn(command, args, { env: env });
+        
+        results.process = subProcess;
 
-        process.stdout.on('data', (data) => {
+        subProcess.stdout.on('data', (data) => {
             results.messages.push({
                 data: data,
                 type: "stdout"
@@ -62,7 +67,7 @@ function runTerminal(command, args = [], block = true) {
             }
             
         });
-        process.stderr.on('data', (data) => {
+        subProcess.stderr.on('data', (data) => {
             results.messages.push({
                 data: data,
                 type: "stderr"
@@ -71,7 +76,7 @@ function runTerminal(command, args = [], block = true) {
                 results.messages.splice(0, results.messages.length - MAX_MESSAGES);
             }
         });
-        process.on('error', (err) => {
+        subProcess.on('error', (err) => {
             results.messages.push({
                 data: err,
                 type: "stderr"
@@ -81,7 +86,7 @@ function runTerminal(command, args = [], block = true) {
             }
             results.status = "error";
         })
-        process.on('close', (code) => {
+        subProcess.on('close', (code) => {
             if (code === 0) {
                 results.status = "success"
             } else {
@@ -97,6 +102,10 @@ function runTerminal(command, args = [], block = true) {
         }
     })
     return promise;
+}
+
+function getSystemPath() {
+    return runTerminal("sh", ["-c", "echo $PATH"]);
 }
 
 function where(program) {
@@ -372,6 +381,7 @@ const sockerServerFunctions = ensureRSocketServerSingleton();
 //const dataPath = storage.getDataPath();
 
 exports.rcmd = {
+    getSystemPath: getSystemPath,
     find_rscript: find_rscript,
     version: r_version,
     evalRIsolate: async (script, block = true) => {

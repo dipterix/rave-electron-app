@@ -2,7 +2,8 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron');
+const { title } = require('process');
 
 
 // tools
@@ -11,7 +12,17 @@ contextBridge.exposeInMainWorld('raveElectronAPI', {
   node: () => process.versions.node,
   chrome: () => process.versions.chrome,
   electron: () => process.versions.electron,
+
+  showNotification: (body, title = "RAVE Notification") => {
+    return ipcRenderer.invoke('notification:show', {
+      title: title,
+      body: body
+    });
+  },
   
+  getSystemPath: () => {
+    return ipcRenderer.invoke('R:getSystemPath');
+  },
 
   getPathRscript: () => {
     return ipcRenderer.invoke('R:getPathRscript');
