@@ -123,17 +123,61 @@
                   </a>
                 </div>
               </div>
-              <div class="card card-primary card-outline">
-                <div class="card-body">
-                  <h5 class="card-title">Card title</h5>
-                  <p class="card-text">
-                    Some quick example text to build on the card title and make up the bulk of the card's
-                    content.
-                  </p>
-                  <a href="#" class="card-link">Card link</a>
-                  <a href="#" class="card-link">Another link</a>
+              <form id="input-remote-form" class="card">
+                <div class="card-header">
+                  <h5 class="card-title m-0">Launch RAVE on remote server</h5>
                 </div>
-              </div>
+                <div class="card-body">
+                  <div class="card-text row">
+                    <div class="col-sm-6">
+                      <div class="form-group">
+                        <label for="input-remote-host">Remote server</label>
+                        <input type="text" class="form-control" id="input-remote-host" aria-describedby="serverAddr" placeholder="Default: 127.0.0.1">
+                        <small id="serverAddr" class="form-text text-muted">Host IP address</small>
+                      </div>
+                    </div>
+                    <div class="col-sm-3">
+                      <div class="form-group">
+                        <label for="input-remote-port">SSH port</label>
+                        <input type="number" class="form-control" id="input-remote-port" placeholder="22">
+                      </div>
+                    </div>
+                    <div class="col-sm-3">
+                      <div class="form-group">
+                        <label for="input-remote-port">RAVE port</label>
+                        <input type="number" class="form-control" id="input-remote-rave-port" placeholder="Random">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-text row">
+                    <div class="col-sm-6">
+                      <div class="form-group">
+                        <label for="input-remote-username">Username</label>
+                        <input type="text" class="form-control" id="input-remote-username" placeholder="Login user">
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" value="" id="input-remote-remember-username">
+                          <label class="form-check-label" for="input-remote-remember-username">
+                            Remember username
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-sm-6">
+                      <div class="form-group">
+                        <label for="input-remote-password">Password</label>
+                        <input type="password" class="form-control" id="input-remote-password" aria-describedby="serverPassword">
+                        <small id="serverPassword" class="form-text text-muted">We don't store your password</small>
+                      </div>
+                    </div>
+                  </div>
+                  
+                </div>
+                <div class="card-footer p-2">
+                  <div class="float-right">
+                    <button id="input-remote-submit" type="submit" class="btn btn-primary">Connect & Start</button>
+                  </div>
+                </div>
+              </form>
             </div>
 
             <div class="col-lg-6">

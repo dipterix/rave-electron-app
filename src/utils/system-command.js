@@ -384,14 +384,12 @@ exports.rcmd = {
     getSystemPath: getSystemPath,
     find_rscript: find_rscript,
     version: r_version,
+    RSocketServer: ensureRSocketServerSingleton,
     evalRIsolate: async (script, block = true) => {
         const results = await run_r(script, block);
         return(results)
     },
-    evalServer: async (script, block = true) => {
-        const results = await sockerServerFunctions.executeRSocketServer(script, block);
-        return(results)
-    },
-    shutdownServer: sockerServerFunctions.shutdownRSocketServer,
-    package_version: package_version
+    package_version: package_version,
+    setAppSettings: setAppSettings,
+    getAppSettings: getAppSettings,
 };

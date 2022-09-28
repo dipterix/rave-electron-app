@@ -60,6 +60,17 @@ contextBridge.exposeInMainWorld('raveElectronAPI', {
     return ipcRenderer.invoke('shell:openExternal', url);
   },
 
+  launchSSHRAVE: (config = {}) => {
+    return ipcRenderer.invoke('remote:launchRAVE', config);
+  },
+
+  setAppSettings: (settings) => {
+    return ipcRenderer.invoke('settings:set', settings);
+  },
+  getAppSettings: (keys) => {
+    return ipcRenderer.invoke('settings:get', keys);
+  },
+
 
   replaceTextById: (elementId, text) => {
     const element = document.getElementById(elementId);

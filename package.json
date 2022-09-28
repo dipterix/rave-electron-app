@@ -24,6 +24,9 @@
     "electron-squirrel-startup": "^1.0.0",
     "ssh2": "^1.11.0"
   },
+  "overrides": {
+    "nan": "github:jkleinsc/nan#remove_accessor_signature"
+  },
   "devDependencies": {
     "@electron-forge/cli": "^6.0.0-beta.66",
     "@electron-forge/maker-deb": "^6.0.0-beta.66",

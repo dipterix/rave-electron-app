@@ -216,36 +216,124 @@ class TerminalConsole {
   }
 
 
-  async evalR(script, isolate = false, block = true, jobId = makeid(4)) {
-    const item = this.addItem(script, "command");
-    const itemResults = this.addItem( "# Running...", "normal", false, true );
+  async evalR(script, args = {
+    isolate : false,
+    block : true,
+    jobId : undefined
+  }) {
+
+    const args2 = Object.assign(args, { resultPlaceholder: args.resultPlaceholder || "# Running..." });
+    const block = args2.block === false ? false : true;
+    const item = this.addNoneBlockingStatus(script, args2);
+    
+    let result;
+    if( args2.isolate ) {
+      result = await raveElectronAPI.evalRIsolate(script, block, args2.jobId);
+    } else {
+      result = await raveElectronAPI.evalRServer(script, block, args2.jobId);
+    }
+    item.result = result;
+    return item;
+  }
+
+  addNoneBlockingStatus(comment, args = {}) {
+    const leaveOpen = args.leaveOpen !== true ? false : true;
+    const opened = this.isOpen();
+    const jobId = args.jobId;
+
+    const item = this.addItem(comment, "command");
+    const itemResults = this.addItem( args.resultPlaceholder || "# (No results captured)", "normal", false, true );
     item.wrapper.appendChild( itemResults.wrapper );
 
-    let result;
-    if( isolate ) {
-      result = await raveElectronAPI.evalRIsolate(script, block, jobId);
-    } else {
-      result = await raveElectronAPI.evalRServer(script, block, jobId);
-    }
-     
-    if( result ) {
-      itemResults.element.innerText = result.message;
-      switch (result.status) {
-        case "started":
-          break;
-        case "success":
-          break;
-        default:
-          itemResults.wrapper.className = `pl-2 pr-2 pt-0 pb-0 m-0 hljs-keyword`;
-          break;
+    const onFinish = () => {
+      console.log("finalizing")
+      if( !(leaveOpen || opened) ) {
+        this.close();
       }
-    } else {
-      itemResults.element.innerText = "# (No results captured)"
+      if( typeof jobId === "string" && this._jobs[jobId] === this ) {
+        delete this._jobs[jobId];
+      }
+      if( typeof args.onFinish === "function" ) {
+        args.onFinish();
+      }
     }
-    return {
-      result: result,
-      outputElement: itemResults.element
+
+    const re = {
+      outputElement: itemResults.element,
+      _finished: false,
+      _caveat : args.caveat,
+      _result: {},
+
+      get finished () {
+        return this._finished;
+      },
+      set finished (v) {
+        if( this._finished ) {
+          return true;
+        }
+        this._finished = v;
+        if( this._finished ) {
+          onFinish();
+        }
+        return v
+      },
+
+      get result () {
+        return this._result;
+      },
+      set result (v) {
+        let msg = this.outputElement.innerText;
+        if( v && v.status ) {
+          this._result = v;
+          msg = v.message;
+          switch (v.status) {
+            case "inited":
+            case "started":
+              msg = `${msg}\nStill running...`;
+              break;
+            case "success":
+              this.finished = true;
+              break;
+            default:
+              this.finished = true;
+              break;
+          }
+        }
+        if( this.finished ) {
+          const s = this.caveat;
+          if( s ) {
+            msg = `${msg}\n${s}`;
+          }
+        }
+        this.outputElement.innerText = msg;
+        if( this.resultStatus === "error" ) {
+          this.outputElement.className = "p-0 m-0 hljs-keyword";
+        }
+        
+        return v;
+      }, 
+
+      get resultStatus () {
+        return this._result.status || "inited";
+      },
+      
+      get caveat () {
+        if( !this._caveat || !this._result ) { return }
+        let s = `== ${this._result.status}: ${this._caveat}`;
+        const rem = 79 - s.length;
+        if(rem > 0) {
+          s = `${s} ${"=".repeat(rem)}`;
+        }
+        return s;
+      }
+
     };
+
+    if( typeof jobId === "string" ) {
+      this._jobs[jobId] = re;
+    }
+
+    return re;
   }
 
   isOpen() {
@@ -270,98 +358,73 @@ class TerminalConsole {
       delete this._jobs[jobId];
       return;
     }
-    if( !resultObj ) {
-      const s = jobDetails.getCaveat("NoResults");
-      if( typeof s === "string" ) {
-        jobDetails.outputElement.innerText = s;
-        jobDetails.outputElement.className = "hljs-keyword";
-      }
-      jobDetails.finished = true;
-      delete this._jobs[jobId];
-      return;
-    }
-    
-    if( resultObj.messages.length > 0 ) {
-      let msg = resultObj.message;
-
-      if( resultObj.status === "started" ) {
-        msg = `${msg}\nStill running...`;
-      } else {
-        const s = jobDetails.getCaveat(resultObj.status);
-        if( typeof s === "string" ) {
-          msg = `${msg}\n${s}`;
-        }
-
-        if( resultObj.status === "error" ) {
-          jobDetails.outputElement.className = "hljs-keyword";
-        }
-      }
-
-      // string.charAt(0).toUpperCase() + string.slice(1)
-
-      jobDetails.outputElement.innerText = msg;
-    }
-    
-    if( resultObj.status !== "started" ) {
-      jobDetails.finished = true;
-      try {
-        jobDetails.finalize();
-      } catch (error) {
-        
-      }
-      delete this._jobs[jobId];
-    }
-
+    jobDetails.result = resultObj;
   }
 
-  async addJob(script, onFinish, args = {}) {
+  addRJob(script, args = {}) {
 
-    const isolate = args.isolate ? true : false;
-    const shutdownServer = (isolate && args.shutdownServer) ? true : false;
-    const leaveOpen = args.leaveOpen !== true ? false : true;
-    const caveat = typeof args.caveat === "string" ? args.caveat : undefined;
-    const block = args.block !== true ? false : true;
+    const shutdownServer = (args.isolate && args.shutdownServer) ? true : false;
+    this.open();
     
 
-    const opened = this.isOpen();
+    const p1 = new Promise((resolve, reject) => {
+      if( shutdownServer ) {
+        raveElectronAPI.shutdownRServer()
+          .then(resolve)
+          .catch((e) => {
+            console.log("Unable to shutdown R socket server... Start isolated job anyway.");
+            resolve();
+          })
+      } else {
+        resolve()
+      }
+    })
+    
+    return new Promise((resolve, reject) => {
+      p1.then(() => {
+        const args2 = Object.assign(args, { jobId : makeid(10) });
+        this.evalR(script, args2).then(resolve);
+      })
+    });
+  }
+
+  async addSSHJob(config) {
+    // {host: "127.0.0.1", username: "tester", password: "#Matrix9191"}
+    const args2 = Object.assign(config, {
+      resultPlaceholder: config.resultPlaceholder || "# Launching RAVE from remove server...",
+      jobId: makeid(11)
+    });
+    const item = this.addNoneBlockingStatus(`# Connecting to remote server at: ${config.host}`, args2);
     this.open();
-
-    const jobId = makeid(10);
-
-    if( shutdownServer ) {
-      try {
-        await raveElectronAPI.shutdownRServer();
-      } catch (error) {
-        console.log("Unable to shutdown R socket server... Start isolated job anyway.")
+    try {
+      const info = await raveElectronAPI.launchSSHRAVE(args2);
+      if( info && info.host && info.port ) {
+        const url = `http://${info.host}:${info.port}`;
+        raveElectronAPI.openExternalURL(url);
+        notification.showNotification(
+          `Instance launched at <a href="${url}" target="_blank">${url}</a>`,
+          {
+            title: "Launching RAVE from remote server",
+            type: "success",
+          }
+        )
+      } else {
+        throw new Error("Unable to obtain the session information from the server.")
       }
+      
+    } catch (error) {
+      notification.showNotification(
+        `Unable to launch RAVE on the remote server. <br />${error.message}`,
+        {
+          title: "Launching RAVE from remote server",
+          type: "error",
+          delay: 5000
+        }
+      )
     }
-
-    const container = await this.evalR(script, isolate, block, jobId);
-    this._jobs[jobId] = {
-      finished: false,
-      caveat : caveat,
-      outputElement : container.outputElement,
-      getCaveat: function(status, width = 80) {
-        if( !this.caveat ) { return }
-        let s = `== ${status}: ${this.caveat}`;
-        const rem = width - 1 - s.length;
-        if(rem > 0) {
-          s = `${s} ${"=".repeat(rem)}`;
-        }
-        return s;
-      },
-      finalize: () => {
-        if( !(leaveOpen || opened) ) {
-          this.close();
-        }
-        if( typeof onFinish === "function" ) {
-          onFinish();
-        }
-      }
-    };
-
-
-    return container;
+    
+    
+    return item;
   }
 }
 
@@ -560,12 +623,12 @@ async function launchRAVESession (session_id, args = {}) {
 
     postRAVESession(session_id2, false);
   }
-  terminalConsole.addJob(`
+  terminalConsole.addRJob(`
   ravedash::start_session(
     session = "${session_id2}", port = ${port}, jupyter = FALSE, as_job = FALSE, 
     launch_browser = FALSE, single_session = ${externalBrowser ? "FALSE" : "TRUE"}
   )
-  `, ()=>{}, {
+  `, {
     shutdownServer : false, 
     isolate : true, 
     block : false
@@ -658,97 +721,103 @@ function installRAVE () {
     }
   );
 
-  terminalConsole.addJob(
+  terminalConsole.addRJob(
     `
     if(system.file(package="ravemanager") == "") {
-      utils::install.packages('ravemanager', repos = 'https://beauchamplab.r-universe.dev')
+      lib_path <- Sys.getenv("R_LIBS_USER", unset = NA)
+      if( "windows" %in% tolower(.Platform$OS.type) || 
+          startsWith(tolower(R.version$os), "win")) {
+        lib_path <- strsplit(lib_path, ";")[[1]]
+      } else {
+        lib_path <- strsplit(lib_path, ":")[[1]]
+      }
+      if(!dir.exists(lib_path)) {
+        dir.create(lib_path, recursive = TRUE)
+      }
+      utils::install.packages('ravemanager', repos = 'https://beauchamplab.r-universe.dev', lib = lib_path)
     } else {
       ravemanager::upgrade_installer()
     }
     `, 
-    () => {
-
-      notification.hideNotification(notifId);
-      notifId = notification.showNotification(
-        `Installing RAVE & core dependencies... It will take a while if this is the first time that you install RAVE`,
-        {
-          title: "RAVE Installer",
-          type: "default",
-          autohide: false
-        }
-      );
-
-      terminalConsole.addJob(
-        "ravemanager::install(finalize = FALSE)",
-        () => {
-
-          notification.hideNotification(notifId);
-          notifId = notification.showNotification(
-            `Installing built-in pipelines... (template brain, Notch filter, Morelet wavelet, Electrode localization, ...)`,
-            {
-              title: "RAVE Installer",
-              type: "default",
-              autohide: false
-            }
-          );
-          terminalConsole.addJob(
-            'ravemanager::finalize_installation(packages = c("raveio", "threeBrain"))',
-            () => {
-
-              notification.hideNotification(notifId);
-              notifId = notification.showNotification(
-                `The RAVE core has been successfully installed. You can start RAVE sessions now while the finalizing script is running...`,
-                {
-                  title: "RAVE Installer",
-                  type: "info",
-                  autohide: false
-                }
-              );
-
-              terminalConsole.addJob(
-                `
-                allPackages <- unique(utils::installed.packages()[,1])
-                allPackages <- allPackages[!allPackages %in% c("raveio", "threeBrain")]
-                ravemanager::finalize_installation(packages = allPackages)
-                `,
-                () => {
-                  notification.hideNotification(notifId);
-                  notifId = notification.showNotification(
-                    `Congratulations, RAVE has been upgraded! <strong>Please restart this application (RAVE control center).</strong>`,
-                    {
-                      title: "RAVE Installer",
-                      type: "success",
-                      autohide: false
-                    }
-                  );
-                },
-                args = {
-                  isolate: true, 
-                  shutdownServer: true,
-                  caveat: "Finalize installations"
-                }
-              )
-            },
-            args = {
-              isolate: true, 
-              shutdownServer: true,
-              caveat: "Install built-in pipelines"
-            }
-          )
-        },
-        args = {
-          isolate: true, 
-          shutdownServer: true,
-          caveat: "Install RAVE & dependencies"
-        }
-      )
-    }, 
     args = {
       isolate: true, 
       shutdownServer: true,
-      caveat: "Install/update ravemanager"
+      caveat: "Install/update ravemanager",
+      onFinish: () => {
+        notification.hideNotification(notifId);
+        notifId = notification.showNotification(
+          `Installing RAVE & core dependencies... It will take a while if this is the first time that you install RAVE`,
+          {
+            title: "RAVE Installer",
+            type: "default",
+            autohide: false
+          }
+        );
+
+        terminalConsole.addRJob(
+          "ravemanager::install(finalize = FALSE)",
+          args = {
+            isolate: true, 
+            shutdownServer: true,
+            caveat: "Install RAVE & dependencies",
+            onFinish: () => {
+              notification.hideNotification(notifId);
+              notifId = notification.showNotification(
+                `Installing built-in pipelines... (template brain, Notch filter, Morelet wavelet, Electrode localization, ...)`,
+                {
+                  title: "RAVE Installer",
+                  type: "default",
+                  autohide: false
+                }
+              );
+              terminalConsole.addRJob(
+                'ravemanager::finalize_installation(packages = c("raveio", "threeBrain"))',
+                {
+                  isolate: true, 
+                  shutdownServer: true,
+                  caveat: "Install built-in pipelines",
+                  onFinish : () => {
+                    notification.hideNotification(notifId);
+                    notifId = notification.showNotification(
+                      `The RAVE core has been successfully installed. You can start RAVE sessions now while the finalizing script is running...`,
+                      {
+                        title: "RAVE Installer",
+                        type: "success",
+                        autohide: false
+                      }
+                    );
+                    terminalConsole.addRJob(
+                      `
+                      allPackages <- unique(utils::installed.packages()[,1])
+                      allPackages <- allPackages[!allPackages %in% c("raveio", "threeBrain")]
+                      ravemanager::finalize_installation(packages = allPackages)
+                      `,
+                      {
+                        isolate: true, 
+                        shutdownServer: true,
+                        caveat: "Finalize installations",
+                        onFinish: () => {
+                          notification.hideNotification(notifId);
+                          notifId = notification.showNotification(
+                            `Congratulations, RAVE has been upgraded! <strong>Please restart this application (RAVE control center).</strong>`,
+                            {
+                              title: "RAVE Installer",
+                              type: "success",
+                              autohide: false
+                            }
+                          );
+                        }
+                      }
+                    )
+                  }
+                }
+              )
+            }
+          }
+        )
+      }
     }
-  );
+  )
 }
 
 
@@ -792,6 +861,108 @@ $(document).ready(async function() {
   document.getElementById("input-new-session").addEventListener("click", () => {
     launchRAVESession();
   })
+
+  const remoteForm = document.getElementById("input-remote-form")
+  const elementHost = document.getElementById("input-remote-host");
+  const elementPort = document.getElementById("input-remote-port");
+  const elementRAVEPort = document.getElementById("input-remote-rave-port");
+  const elementUsername = document.getElementById("input-remote-username");
+  const elementRememberUsername = document.getElementById("input-remote-remember-username");
+  const elementPassword = document.getElementById("input-remote-password");
+  const elementSubmit = document.getElementById("input-remote-submit");
+  
+  remoteForm.addEventListener("submit", async (evt) => {
+    evt.preventDefault();
+    
+    // validate form
+    let host = elementHost.value.trim();
+    if( host === "" ) { host = "127.0.0.1" }
+    let sshPort = parseInt(elementPort.value);
+    if( isNaN(sshPort) ) {
+      sshPort = 22;
+    } else if (sshPort < 0 || sshPort > 65535) {
+      notification.showNotification(
+        "Invalid SSH port: port must be an integer from 1-65535",
+        args = {
+          type: "error"
+        }
+      )
+      return;
+    }
+    let ravePort = parseInt(elementRAVEPort.value);
+    if( isNaN(ravePort) ) {
+      ravePort = undefined;
+    } else if (ravePort < 0 || ravePort > 65535) {
+      notification.showNotification(
+        "Invalid RAVE port: port must be an integer from 1-65535. Using random port instead",
+        args = {
+          type: "warning"
+        }
+      )
+      ravePort = undefined;
+    }
+
+    const username = elementUsername.value;
+    const password = elementPassword.value;
+    const rememberUsername = elementRememberUsername.checked;
+
+    elementPassword.value = "";
+
+    const settings = {
+      sshHost: host,
+      sshPort: sshPort,
+      sshRAVEPort: ravePort,
+      username: rememberUsername ? username : "",
+      rememberUsername: rememberUsername
+    }
+
+    raveElectronAPI.setAppSettings(settings);
+
+    elementHost.disabled = true;
+    elementPort.disabled = true;
+    elementRAVEPort.disabled = true;
+    elementUsername.disabled = true;
+    elementRememberUsername.disabled = true;
+    elementPassword.disabled = true;
+    elementSubmit.disabled = true;
+
+    try {
+      await terminalConsole.addSSHJob({
+        host: host, port: sshPort, username: username, password: password, 
+        RAVEPort: ravePort, newSession: false, leaveOpen: true
+      });
+    } catch (error) {
+      notification.showNotification(
+        `Unable to SSH & open the server. Reasons: <br><code>${error.toString()}</code>`,
+        {
+          type: "error"
+        }
+      );
+    }
+    elementHost.disabled = false;
+    elementPort.disabled = false;
+    elementRAVEPort.disabled = false;
+    elementUsername.disabled = false;
+    elementRememberUsername.disabled = false;
+    elementPassword.disabled = false;
+    elementSubmit.disabled = false;
+
+    
+  })
+
+  raveElectronAPI.getAppSettings(["sshHost", "sshPort", "sshRAVEPort", "username", "rememberUsername"])
+    .then((settings) => {
+      elementHost.value = settings.sshHost || "";
+      elementPort.value = settings.sshPort || "";
+      elementRAVEPort.value = settings.sshRAVEPort || "";
+      const rem = settings.rememberUsername === false ? false : true;
+      elementRememberUsername.checked = rem;
+      if( rem ) {
+        elementUsername.value = settings.username || "";
+      } else if (typeof settings.username === "string" && settings.username.length > 0) {
+        raveElectronAPI.setAppSettings({username: undefined});
+      }
+    });
 
 
   // Update UI components
