@@ -1,6 +1,17 @@
 const storage = require('electron-json-storage');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
 
-const app_settings = {};
+function ensureAppSettings() {
+  const uinfo = os.userInfo();
+  const modulePath = path.join(uinfo.homedir, "rave_modules", "rave-app-settings");
+  if( !fs.existsSync(modulePath) ) {
+    fs.mkdirSync(modulePath, { recursive: true });
+  }
+  storage.setDataPath(modulePath);
+  return modulePath;
+}
 
 function debug(msg) {
     console.debug(`[RAVE-DEBUG]: ${msg}`);
@@ -8,6 +19,7 @@ function debug(msg) {
 
 // initialize settings
 function getAppSettings(key, is_missing = undefined) {
+  ensureAppSettings()
   const promise = new Promise((resolve) => {
     storage.has( key, (error, hasKey) => {
       if( error ) {
@@ -23,8 +35,10 @@ function getAppSettings(key, is_missing = undefined) {
   });
   return promise;
 }
-function setAppSettings(key, value) {
-  storage.set( key, value );
+
+async function setAppSettings(key, value) {
+  ensureAppSettings();
+  await storage.set( key, value );
 }
 
 exports.getAppSettings = getAppSettings;

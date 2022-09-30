@@ -138,7 +138,7 @@ function createWindow () {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   
-  ipcMain.handle('R:getSystemPath', rcmd.getSystemPath);
+  ipcMain.handle('R:getSystemPath', rcmd.getSystemPath2);
   ipcMain.handle('R:getPathRscript', rcmd.find_rscript);
   ipcMain.handle('R:getVersion', rcmd.version);
   ipcMain.handle('R:getPackageVersion', async (_, arg) => {

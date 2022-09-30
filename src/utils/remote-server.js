@@ -4,6 +4,45 @@ const MAX_MESSAGES = 5000;
 
 class RemoteSSH {
 
+  _getRscript() {
+    return new Promise((resolve, reject) => {
+      let streamData = [];
+
+      // Try to get random port
+      this.conn.shell((err, stream) => {
+        if( err ) {
+          reject(err);
+          return; 
+        }
+
+        stream.on('close', (code, signal) => {
+          console.log('SSH Stream :: close :: code: ' + code + ', signal: ' + signal);
+
+          const response = streamData.join("").split(/[^a-zA-Z0-9\\/\.\ +\-\(\)]+/g).map((v) => {
+            return(v.trim())
+          }).filter((v) => {
+            return(v.includes("Rscript"))
+          })
+          if(response.length === 0) {
+            reject(new Error("Cannot find Rscript binary file from the server. Make sure it's available in the path"));
+          }
+          this.rscript = response[response.length - 1];
+          console.log(`Found Rscript path: ${this.rscript}`);
+          resolve(this.rscript)
+
+        }).on('data', (data) => {
+          if( data ) {
+            const buf = data.toString();
+            streamData.push( buf );
+          }
+          
+        }).end('which Rscript\nexit\n');
+
+
+      })
+    })
+  }
+
   _getRAVEPort () {
     return new Promise((resolve, reject) => {
       if(this.RAVEPort != undefined) {
@@ -13,7 +52,7 @@ class RemoteSSH {
       let streamData = [];
 
       // Try to get random port
-      this.conn.exec('/usr/local/bin/Rscript --no-save --no-restore -e "cat(httpuv::randomPort())"', (err, stream) => {
+      this.conn.exec('"${this.rscript}" --no-save --no-restore -e "cat(httpuv::randomPort())"', (err, stream) => {
         if( err ) {
           reject(err);
           return; 
@@ -51,7 +90,7 @@ class RemoteSSH {
     console.log(`Launching RAVE instance on remote server: http://${host}:${port}`);
 
     const cmd = `
-/usr/local/bin/Rscript --no-save --no-restore -e '
+"${this.rscript}" --no-save --no-restore -e '
 ravedash::start_session(
   new = ${this.useNewSession ? "TRUE" : "NA"}, host = "${host}", port = ${port}, 
   jupyter = FALSE, as_job = FALSE, launch_browser = FALSE, single_session = FALSE
@@ -131,7 +170,9 @@ ravedash::start_session(
         // Connected to server
         console.log('SSH Client :: ready');
 
+        
         try {
+          const rscript = await this._getRscript();
           const port = await this._getRAVEPort();
           const host = this.conn.config.host;
           const re = await this._startSession(host, port, false)

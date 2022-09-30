@@ -3,6 +3,7 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require("node:child_process");
 const { setAppSettings, getAppSettings } = require("./app-settings");
+const { rejects } = require('assert');
 
 function sleep(ms) {
     return new Promise((resolve) => {
@@ -47,69 +48,95 @@ function runTerminal(command, args = [], block = true) {
         }
     };
     const MAX_MESSAGES = 5000; 
-    const promise = new Promise( (resolve) => {
-        const defaultEnv = process.env;
-        let envPath = `${defaultEnv.HOME}/abin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/gfortran/bin:${defaultEnv.PATH}`;
-        envPath = envPath.split(/[;\\:]/g).filter((v, i, self) => {
-            return self.indexOf(v) === i;
-        }).join(":");
-        
-        const env = Object.assign(defaultEnv, {
-            PATH: envPath
-        })
-        const subProcess = spawn(command, args, { env: env });
-        
-        results.process = subProcess;
+    const promise = new Promise( (resolve, rejects) => {
+        getEnv().then((env) => {
 
-        subProcess.stdout.on('data', (data) => {
-            results.messages.push({
-                data: data,
-                type: "stdout"
-            });
-            if( results.messages.length > MAX_MESSAGES ) {
-                results.messages.splice(0, results.messages.length - MAX_MESSAGES);
+            try {
+                console.log(`Shell:: ${command} ${args.join(" ")}`);
+                results.process = spawn(command, args, { env: env })
+            } catch (error) {
+                rejects(error);
+                return;
             }
+    
+        
+            results.process.on('error', (err) => {
+                results.messages.push({
+                    data: err,
+                    type: "stderr"
+                });
+                if( results.messages.length > MAX_MESSAGES ) {
+                    results.messages.splice(0, results.messages.length - MAX_MESSAGES);
+                }
+                results.status = "error";
+            })
+                
+            results.process.on('close', (code) => {
+                if (code === 0) {
+                    results.status = "success"
+                } else {
+                    results.status = "error"
+                }
+                results.process = undefined;
+                if (block) {
+                    resolve(results);
+                }
+            });
             
-        });
-        subProcess.stderr.on('data', (data) => {
-            results.messages.push({
-                data: data,
-                type: "stderr"
+    
+            results.process.stdout.on('data', (data) => {
+                results.messages.push({
+                    data: data,
+                    type: "stdout"
+                });
+                if( results.messages.length > MAX_MESSAGES ) {
+                    results.messages.splice(0, results.messages.length - MAX_MESSAGES);
+                }
+                
             });
-            if( results.messages.length > MAX_MESSAGES ) {
-                results.messages.splice(0, results.messages.length - MAX_MESSAGES);
-            }
-        });
-        subProcess.on('error', (err) => {
-            results.messages.push({
-                data: err,
-                type: "stderr"
+            results.process.stderr.on('data', (data) => {
+                results.messages.push({
+                    data: data,
+                    type: "stderr"
+                });
+                if( results.messages.length > MAX_MESSAGES ) {
+                    results.messages.splice(0, results.messages.length - MAX_MESSAGES);
+                }
             });
-            if( results.messages.length > MAX_MESSAGES ) {
-                results.messages.splice(0, results.messages.length - MAX_MESSAGES);
-            }
-            results.status = "error";
-        })
-        subProcess.on('close', (code) => {
-            if (code === 0) {
-                results.status = "success"
-            } else {
-                results.status = "error"
-            }
-            results.process = undefined;
-            if (block) {
+            if (!block) {
                 resolve(results);
             }
         });
-        if (!block) {
-            resolve(results);
-        }
     })
     return promise;
 }
 
 function getSystemPath() {
-    return runTerminal("sh", ["-c", "echo $PATH"]);
+    return process.env.PATH || process.env.path;
+}
+
+async function getSystemPath2() {
+    const env = await getEnv();
+    return env.PATH;
+}
+
+async function getEnv() {
+    const defaultEnv = process.env;
+    const defaultPath = `${defaultEnv.HOME}/abin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/gfortran/bin:${defaultEnv.PATH}`;
+    let env = Object.assign({ PATH: defaultPath }, process.env);
+    try {
+        const env2 = await getAppSettings("env");
+        if( env2 && typeof env2 === "object" ) {
+            Object.assign(env, env2);
+        }
+    } catch (error) {}
+    let envPath = typeof env.PATH === "string" && env.PATH.length > 0 ? env.PATH : defaultPath;
+    envPath = envPath.split(/[;\\:]/g).filter((v, i, self) => {
+        return self.indexOf(v) === i;
+    }).join(path.delimiter);
+    env.PATH = envPath;
+    console.log(env.PATH);
+    return env;
 }
 
 function where(program) {
@@ -132,13 +159,15 @@ async function find_rscript() {
         return rscript;
     }
     const result = await where("Rscript");
-    if (result.status === "success") {
+    if (result.status === "success" && typeof result.message === "string") {
         rscript = result.message.trim();
         if (typeof rscript === 'string' && fs.existsSync(rscript)) {
             debug(`Found Rscript via system path: ${rscript}`);
-            setAppSettings("path-cmd-Rscript", rscript);
+            await setAppSettings("path-cmd-Rscript", rscript);
             return rscript;
         }
+    } else {
+        throw new Error("Cannot find Rscript path")
     }
     return;
 }
@@ -386,6 +415,7 @@ const sockerServerFunctions = ensureRSocketServerSingleton();
 
 exports.rcmd = {
     getSystemPath: getSystemPath,
+    getSystemPath2: getSystemPath2,
     find_rscript: find_rscript,
     version: r_version,
     RSocketServer: ensureRSocketServerSingleton,

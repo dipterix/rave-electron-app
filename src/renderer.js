@@ -222,7 +222,7 @@ class TerminalConsole {
     jobId : undefined
   }) {
 
-    const args2 = Object.assign(args, { resultPlaceholder: args.resultPlaceholder || "# Running..." });
+    const args2 = Object.assign({ resultPlaceholder: args.resultPlaceholder || "# Running..." }, args);
     const block = args2.block === false ? false : true;
     const item = this.addNoneBlockingStatus(script, args2);
     
@@ -382,7 +382,7 @@ class TerminalConsole {
     
     return new Promise((resolve, reject) => {
       p1.then(() => {
-        const args2 = Object.assign(args, { jobId : makeid(10) });
+        const args2 = Object.assign({ jobId : makeid(10) }, args);
         this.evalR(script, args2).then(resolve);
       })
     });
@@ -391,10 +391,10 @@ class TerminalConsole {
   async addSSHJob(config) {
     // {host: "127.0.0.1", username: "tester", password: "#Matrix9191"}
     const jobId = makeid(11);
-    const args2 = Object.assign(config, {
+    const args2 = Object.assign({
       resultPlaceholder: config.resultPlaceholder || "# Launching RAVE from remove server...",
       jobId: jobId
-    });
+    }, config);
     const item = this.addNoneBlockingStatus(`# Connecting to remote server at: ${config.host}`, args2);
     this.open();
     try {
@@ -543,7 +543,7 @@ async function updateSystemStatus () {
     // System path
     const sysPath = await raveElectronAPI.getSystemPath();
 
-    raveElectronAPI.replaceTextById("output-system-path", sysPath.message.split(/[;\:]/g).join("\n"));
+    raveElectronAPI.replaceTextById("output-system-path", sysPath.split(/[;\:]/g).join("\n"));
     
   } catch (error) {
     raveElectronAPI.replaceHtmlById("output-system-path", error);
