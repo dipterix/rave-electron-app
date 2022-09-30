@@ -22,8 +22,6 @@
     "electron-context-menu": "^3.3.0",
     "electron-json-storage": "^4.5.0",
     "electron-squirrel-startup": "^1.0.0",
-    "fix-path": "^4.0.0",
-    "shell-path": "^3.0.0",
     "ssh2": "^1.11.0"
   },
   "overrides": {

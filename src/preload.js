@@ -54,6 +54,9 @@ contextBridge.exposeInMainWorld('raveElectronAPI', {
   getOSType: () => {
     return ipcRenderer.invoke('system:osType');
   },
+  getOSArch: () => {
+    return ipcRenderer.invoke('system:osArch');
+  },
 
   evalRIsolate: ( script, block = true, jobId = undefined ) => {
     return ipcRenderer.invoke('R:evalRIsolate', {

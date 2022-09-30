@@ -1,0 +1,6 @@
+{
+  "darwin-arm" : "https://cloud.r-project.org/bin/macosx/big-sur-arm64/base/R-release.pkg",
+  "darwin-x86" : "https://cloud.r-project.org/bin/macosx/base/R-release.pkg",
+  "win32-x86" : "https://cloud.r-project.org/bin/windows/base/R-release.exe",
+  "default" : "https://cloud.r-project.org/"
+}

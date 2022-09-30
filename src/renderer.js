@@ -1183,6 +1183,47 @@ const openSetRscriptDialog = (function () {
   browseBtnWrapper.appendChild(browseBtn);
   inputWrapper.appendChild(browseBtnWrapper);
 
+  const rscriptDownloader = document.createElement("div");
+  rscriptDownloader.className = "text-small"
+  const rscriptLink = document.createElement("a");
+  rscriptLink.setAttribute("href", "#");
+  rscriptLink.innerText = "* Download the latest R";
+  rscriptLink.addEventListener("click", async () => {
+    // window.open(url, "_blank");
+    let url = "https://cloud.r-project.org/";
+    try {
+      const osType = await raveElectronAPI.getOSType();
+      let osArch = await raveElectronAPI.getOSArch();
+      osArch = osArch.startsWith("arm") ? "arm" : "x86";
+      const osKey = `${osType}-${osArch}`;
+      switch (osKey) {
+        case "darwin-arm":
+          url = "https://cloud.r-project.org/bin/macosx/big-sur-arm64/base/R-release.pkg";
+          break;
+
+        case "darwin-x86":
+          url = "https://cloud.r-project.org/bin/macosx/base/R-release.pkg";
+          break;
+
+        case "win32-x86":
+        case "win32-arm":
+          url = "https://cloud.r-project.org/bin/windows/base/R-release.exe"
+          break;
+      
+        default:
+          break;
+      }
+    } catch (error) {
+      
+    }
+    
+    // window.open(url, "_blank");
+    raveElectronAPI.openExternalURL(url);
+  })
+  rscriptDownloader.appendChild(rscriptLink);
+  wrapper.appendChild(rscriptDownloader);
+
+
   browseBtn.addEventListener("click", async () => {
     let current = input.value;
     if( typeof current !== "string" || current.trim() == "" ) {
