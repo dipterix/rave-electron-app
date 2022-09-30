@@ -3,6 +3,8 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 
+const appSettingsCache = {};
+
 function ensureAppSettings() {
   const uinfo = os.userInfo();
   const modulePath = path.join(uinfo.homedir, "rave_modules", "rave-app-settings");
@@ -19,18 +21,34 @@ function debug(msg) {
 
 // initialize settings
 function getAppSettings(key, is_missing = undefined) {
-  ensureAppSettings()
+  
   const promise = new Promise((resolve) => {
+    if(appSettingsCache.hasOwnProperty(key)) {
+      const v = appSettingsCache[key];
+      if(v !== undefined) {
+        resolve(v);
+        return;
+      }
+    }
+    ensureAppSettings()
     storage.has( key, (error, hasKey) => {
       if( error ) {
         resolve( is_missing );
-      }
-      if( hasKey ) {
-        const v = storage.getSync( key );
-        resolve( v );
         return;
       }
-      resolve( is_missing );
+      
+      if( hasKey ) {
+        const v = storage.getSync(key);
+        resolve( v );
+        /*
+        storage.get( key , (v) => {
+          console.log(`asdasdasdasdadad ${key}: ${hasKey}  ${v}`);
+          resolve( v );
+        });
+        */
+      } else {
+        resolve( is_missing );
+      }
     })
   });
   return promise;
@@ -38,6 +56,7 @@ function getAppSettings(key, is_missing = undefined) {
 
 async function setAppSettings(key, value) {
   ensureAppSettings();
+  appSettingsCache[key] = value;
   await storage.set( key, value );
 }
 

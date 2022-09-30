@@ -10,21 +10,21 @@ function makeid(length) {
   var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   var charactersLength = characters.length;
   for (var i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() *
-          charactersLength));
+    result += characters.charAt(Math.floor(Math.random() *
+      charactersLength));
   }
   return result;
 }
 
 class Notification {
-  constructor() {}
+  constructor() { }
 
   showNotification(body, args = {}) {
     const title = args.title || "RAVE Notification"
     const useSystem = args.useSystem;
     const ntype = args.type;
 
-    if( useSystem ) {
+    if (useSystem) {
       raveElectronAPI.showNotification(body, title);
 
       return;
@@ -32,7 +32,7 @@ class Notification {
       const toastId = `toast-notification-${makeid(10)}`;
 
       let toastClass = "bg-default";
-      if( typeof ntype === "string" ) {
+      if (typeof ntype === "string") {
         switch (ntype) {
           case "info":
             toastClass = "bg-info";
@@ -59,38 +59,38 @@ class Notification {
         position: typeof args.position === "string" ? args.position : "topRight",
         fixed: args.fixed === false ? false : true,
         autohide: args.autohide === false ? false : true,
-        delay : args.delay || 2000,
+        delay: args.delay || 2000,
         autoremove: true,
         fade: args.fade === false ? false : true,
-        title : title,
+        title: title,
         subtitle: args.subtitle || null,
         close: true,
         body: body,
         class: `${toastId} ${toastClass} fill-width ${args.class || ""}`,
       }
-      
-      $(document).Toasts("create", toastArgs );
+
+      $(document).Toasts("create", toastArgs);
 
       return toastId;
-      
+
     }
-    
+
   }
 
   hideNotification(toastId) {
-    if( typeof toastId !== "string" || toastId.length == 0 ) {
+    if (typeof toastId !== "string" || toastId.length == 0) {
       // hide all
       $(`.toast`).toast('hide');
     } else {
       $(`.toast.${toastId}`).toast('hide');
     }
-    
+
   }
 
 }
 
 class TerminalConsole {
-  constructor (element, inputElement, maxItems=1000){
+  constructor(element, inputElement, maxItems = 1000) {
     this._el = document.createElement("div");
     this._jobs = {};
     this.maxItems = maxItems;
@@ -101,20 +101,20 @@ class TerminalConsole {
     this.scriptIdx = -1;
 
     this.inputElement.addEventListener('keyup', (evt) => {
-      if ( (evt.key === 'Enter' || evt.keyCode === 13) && this.inputElement.value.length > 0 ) {
-        this.scripts.push( this.inputElement.value );
+      if ((evt.key === 'Enter' || evt.keyCode === 13) && this.inputElement.value.length > 0) {
+        this.scripts.push(this.inputElement.value);
         this.scriptIdx = -1;
-        this.evalR( this.inputElement.value );
+        this.evalR(this.inputElement.value);
         this.inputElement.value = "";
-      } else if ( (evt.key === 'ArrowUp' || evt.keyCode === 38) && this.scripts.length > 0 ) {
+      } else if ((evt.key === 'ArrowUp' || evt.keyCode === 38) && this.scripts.length > 0) {
         this.scriptIdx--;
-        if( this.scriptIdx < 0 ) {
+        if (this.scriptIdx < 0) {
           this.scriptIdx = this.scripts.length - 1;
         }
         this.inputElement.value = this.scripts[this.scriptIdx];
-      } else if( (evt.key === 'ArrowDown' || evt.keyCode === 40) && this.scripts.length > 0 ) {
+      } else if ((evt.key === 'ArrowDown' || evt.keyCode === 40) && this.scripts.length > 0) {
         this.scriptIdx++;
-        if( this.scriptIdx >= this.scripts.length ) {
+        if (this.scriptIdx >= this.scripts.length) {
           this.scriptIdx = -1;
           this.inputElement.value = "";
         } else {
@@ -125,18 +125,18 @@ class TerminalConsole {
 
     this._el.addEventListener("setJobStatus", (evt) => {
       const msg = evt.detail;
-      if( ! msg ) { return; }
+      if (!msg) { return; }
       this.setJobStatus(msg.jobId, msg.results);
     })
     raveElectronAPI.registerConsole(this);
 
   }
-  
-  addItem (text, textType, renderNow=true, dryRun=false) {
+
+  addItem(text, textType, renderNow = true, dryRun = false) {
     let msg = text;
     let cls = "hljs-comment";
     let ty = textType;
-    if(ty === "command") {
+    if (ty === "command") {
       cls = "hljs-literal";
       msg = `>> ${text}`
     } else if (ty === "error") {
@@ -148,16 +148,16 @@ class TerminalConsole {
     }
 
     let wrapper, el;
-    if(ty === "command") {
+    if (ty === "command") {
       el = document.createElement("span");
       el.className = `pl-2 pr-2 pt-0 pb-0 m-0 code ${cls}`;
       el.innerText = msg.split("\n").join("\n  >> ");
       wrapper = document.createElement("details");
-      wrapper.className=`p-0 m-0`
+      wrapper.className = `p-0 m-0`
       wrapper.setAttribute("open", "");
       const summary = document.createElement("summary");
-      summary.style="white-space: pre;";
-      summary.className="code p-0 m-0";
+      summary.style = "white-space: pre;";
+      summary.className = "code p-0 m-0";
       summary.appendChild(el);
       wrapper.appendChild(summary);
     } else {
@@ -171,39 +171,39 @@ class TerminalConsole {
     }
 
     const re = {
-      textType  : ty,
-      className : cls,
-      text      : text,
-      wrapper   : wrapper,
-      element   : el
+      textType: ty,
+      className: cls,
+      text: text,
+      wrapper: wrapper,
+      element: el
     };
-    if( !dryRun ) {
+    if (!dryRun) {
       this.items.push(re);
-      if( this.items.length > this.maxItems ) {
+      if (this.items.length > this.maxItems) {
         this.items.shift();
       }
-      if( renderNow ) {
+      if (renderNow) {
         this.render()
       }
     }
     return re;
   }
 
-  addItems (items, renderNow = true) {
-    if(!items) { return; }
-    if(!Array.isArray(items)) {
+  addItems(items, renderNow = true) {
+    if (!items) { return; }
+    if (!Array.isArray(items)) {
       throw new TypeError("TerminalConsole: addItems(items): items must be an array");
     }
     items.forEach((item) => {
-      if( typeof item === "string" ) {
-        this.addItem( item, "normal", false );
+      if (typeof item === "string") {
+        this.addItem(item, "normal", false);
       } else if (Array.isArray(item)) {
-        this.addItem( item[0], item.length > 1 ? item[1] : "normal" , false );
+        this.addItem(item[0], item.length > 1 ? item[1] : "normal", false);
       } else {
-        this.addItem( item.text, item.textType, false )
+        this.addItem(item.text, item.textType, false)
       }
     })
-    if( renderNow ) {
+    if (renderNow) {
       this.render()
     }
   }
@@ -217,17 +217,17 @@ class TerminalConsole {
 
 
   async evalR(script, args = {
-    isolate : false,
-    block : true,
-    jobId : undefined
+    isolate: false,
+    block: true,
+    jobId: undefined
   }) {
 
     const args2 = Object.assign({ resultPlaceholder: args.resultPlaceholder || "# Running..." }, args);
     const block = args2.block === false ? false : true;
     const item = this.addNoneBlockingStatus(script, args2);
-    
+
     let result;
-    if( args2.isolate ) {
+    if (args2.isolate) {
       result = await raveElectronAPI.evalRIsolate(script, block, args2.jobId);
     } else {
       result = await raveElectronAPI.evalRServer(script, block, args2.jobId);
@@ -242,18 +242,18 @@ class TerminalConsole {
     const jobId = args.jobId;
 
     const item = this.addItem(comment, "command");
-    const itemResults = this.addItem( args.resultPlaceholder || "# (No results captured)", "normal", false, true );
-    item.wrapper.appendChild( itemResults.wrapper );
+    const itemResults = this.addItem(args.resultPlaceholder || "# (No results captured)", "normal", false, true);
+    item.wrapper.appendChild(itemResults.wrapper);
 
     const onFinish = () => {
       console.log("finalizing")
-      if( !(leaveOpen || opened) ) {
+      if (!(leaveOpen || opened)) {
         this.close();
       }
-      if( typeof jobId === "string" && this._jobs[jobId] === this ) {
+      if (typeof jobId === "string" && this._jobs[jobId] === this) {
         delete this._jobs[jobId];
       }
-      if( typeof args.onFinish === "function" ) {
+      if (typeof args.onFinish === "function") {
         args.onFinish();
       }
     }
@@ -261,29 +261,29 @@ class TerminalConsole {
     const re = {
       outputElement: itemResults.element,
       _finished: false,
-      _caveat : args.caveat,
+      _caveat: args.caveat,
       _result: {},
 
-      get finished () {
+      get finished() {
         return this._finished;
       },
-      set finished (v) {
-        if( this._finished ) {
+      set finished(v) {
+        if (this._finished) {
           return true;
         }
         this._finished = v;
-        if( this._finished ) {
+        if (this._finished) {
           onFinish();
         }
         return v
       },
 
-      get result () {
+      get result() {
         return this._result;
       },
-      set result (v) {
+      set result(v) {
         let msg = this.outputElement.innerText;
-        if( v && v.status ) {
+        if (v && v.status) {
           this._result = v;
           msg = v.message;
           switch (v.status) {
@@ -299,29 +299,29 @@ class TerminalConsole {
               break;
           }
         }
-        if( this.finished ) {
+        if (this.finished) {
           const s = this.caveat;
-          if( s ) {
+          if (s) {
             msg = `${msg}\n${s}`;
           }
         }
         this.outputElement.innerText = msg;
-        if( this.resultStatus === "error" ) {
+        if (this.resultStatus === "error") {
           this.outputElement.className = "p-0 m-0 hljs-keyword";
         }
-        
-        return v;
-      }, 
 
-      get resultStatus () {
+        return v;
+      },
+
+      get resultStatus() {
         return this._result.status || "inited";
       },
-      
-      get caveat () {
-        if( !this._caveat || !this._result ) { return }
+
+      get caveat() {
+        if (!this._caveat || !this._result) { return }
         let s = `== ${this._result.status}: ${this._caveat}`;
         const rem = 79 - s.length;
-        if(rem > 0) {
+        if (rem > 0) {
           s = `${s} ${"=".repeat(rem)}`;
         }
         return s;
@@ -329,7 +329,7 @@ class TerminalConsole {
 
     };
 
-    if( typeof jobId === "string" ) {
+    if (typeof jobId === "string") {
       this._jobs[jobId] = re;
     }
 
@@ -340,21 +340,21 @@ class TerminalConsole {
     return document.body.classList.contains("terminal-open") ? true : false;
   }
   open() {
-    if( !this.isOpen() ) {
+    if (!this.isOpen()) {
       document.body.classList.add("terminal-open");
     }
   }
   close() {
-    if( this.isOpen() ) {
+    if (this.isOpen()) {
       document.body.classList.remove("terminal-open");
     }
   }
 
   setJobStatus(jobId, resultObj) {
-    
+
     const jobDetails = this._jobs[jobId];
-    if(!jobDetails || typeof jobDetails !== "object" ) { return; }
-    if( jobDetails.finished ) {
+    if (!jobDetails || typeof jobDetails !== "object") { return; }
+    if (jobDetails.finished) {
       delete this._jobs[jobId];
       return;
     }
@@ -365,10 +365,10 @@ class TerminalConsole {
 
     const shutdownServer = (args.isolate && args.shutdownServer) ? true : false;
     this.open();
-    
+
 
     const p1 = new Promise((resolve, reject) => {
-      if( shutdownServer ) {
+      if (shutdownServer) {
         raveElectronAPI.shutdownRServer()
           .then(resolve)
           .catch((e) => {
@@ -379,10 +379,10 @@ class TerminalConsole {
         resolve()
       }
     })
-    
+
     return new Promise((resolve, reject) => {
       p1.then(() => {
-        const args2 = Object.assign({ jobId : makeid(10) }, args);
+        const args2 = Object.assign({ jobId: makeid(10) }, args);
         this.evalR(script, args2).then(resolve);
       })
     });
@@ -399,7 +399,7 @@ class TerminalConsole {
     this.open();
     try {
       const info = await raveElectronAPI.launchSSHRAVE(args2);
-      if( info && info.host && info.port ) {
+      if (info && info.host && info.port) {
         const url = `http://${info.host}:${info.port}`;
         raveElectronAPI.openExternalURL(url);
         notification.showNotification(
@@ -412,7 +412,7 @@ class TerminalConsole {
       } else {
         throw new Error("Unable to obtain the session information from the server.")
       }
-      
+
     } catch (error) {
       notification.showNotification(
         `Unable to launch RAVE on the remote server. <br />${error.message}`,
@@ -427,10 +427,10 @@ class TerminalConsole {
         message: error.toString()
       });
       this.close();
-      
+
     }
-    
-    
+
+
     return item;
   }
 }
@@ -442,42 +442,43 @@ class ModalDialog {
   }
 
   ensureModal() {
-    if(this.$wrapper) { return true; }
+    if (this.$wrapper) { return true; }
     const $wrapper = $("#globalModal.modal");
-    if( $wrapper.length === 0 ) { return false; }
+    if ($wrapper.length === 0) { return false; }
     this.$wrapper = $wrapper;
 
     this.$title = this.$wrapper.find("#modal-title");
     this.$body = this.$wrapper.find("#modal-body");
     this.$secondaryBtn = this.$wrapper.find("#modal-close-button");
     this.$primaryBtn = this.$wrapper.find("#modal-confirm-button");
+    this.$closeIcon = this.$wrapper.find("#modal-close-button0");
 
     this.$primaryBtn.on("click", (evt) => {
       evt.preventDefault();
-      if( typeof this.primaryCallback === "function" ) {
+      if (typeof this.primaryCallback === "function") {
         this.primaryCallback();
       }
       // this.$wrapper.modal("hide");
     })
 
     this.$wrapper.on("shown.bs.modal", () => {
-      if( typeof this.displayCallback === "function" ) {
+      if (typeof this.displayCallback === "function") {
         this.displayCallback();
       }
     })
-    
+
 
     return true;
   }
 
   removeModal() {
-    if(!this.ensureModal()) { return; }
+    if (!this.ensureModal()) { return; }
     this.$wrapper.modal("hide");
     this.primaryCallback = null;
   }
 
   setPrimaryCallback(callback) {
-    if( typeof callback === "function" ) {
+    if (typeof callback === "function") {
       this.primaryCallback = callback;
     } else {
       this.primaryCallback = null;
@@ -485,8 +486,8 @@ class ModalDialog {
   }
 
 
-  showModal(title, body, primaryBtn, secondaryBtn, onConfirmed, onShown) {
-    if(!this.ensureModal()) { return; }
+  showModal(title, body, primaryBtn, secondaryBtn, onConfirmed, onShown, easyClose = true) {
+    if (!this.ensureModal()) { return; }
 
     this.$title.text(title);
     this.$body.html(body);
@@ -494,9 +495,9 @@ class ModalDialog {
     let primaryBtnText = "OK";
     let primaryBtnShow = true;
     let primaryBtnClass = "btn-primary";
-    if( !primaryBtn ) {
+    if (!primaryBtn) {
       primaryBtnShow = false;
-    } else if( typeof primaryBtn === "string" ) {
+    } else if (typeof primaryBtn === "string") {
       primaryBtnText = primaryBtn;
     } else {
       primaryBtnText = primaryBtn.text || primaryBtn.label || "OK";
@@ -510,9 +511,9 @@ class ModalDialog {
     let secondaryBtnText = "OK";
     let secondaryBtnShow = true;
     let secondaryBtnClass = "btn-secondary";
-    if( !secondaryBtn ) {
+    if (!secondaryBtn) {
       secondaryBtnShow = false;
-    } else if( typeof secondaryBtn === "string" ) {
+    } else if (typeof secondaryBtn === "string") {
       secondaryBtnText = secondaryBtn;
     } else {
       secondaryBtnText = secondaryBtn.text || secondaryBtn.label || "OK";
@@ -524,10 +525,18 @@ class ModalDialog {
     this.$secondaryBtn.html(secondaryBtnText);
 
     this.setPrimaryCallback(onConfirmed);
-    if( typeof onShown === "function" ) {
+    if (typeof onShown === "function") {
       this.displayCallback = onShown;
     } else {
       this.displayCallback = null;
+    }
+
+    if (easyClose) {
+      this.$closeIcon.removeClass("hidden");
+      this.$wrapper.removeAttr("data-backdrop");
+    } else {
+      this.$closeIcon.addClass("hidden");
+      this.$wrapper.attr("data-backdrop", "static");
     }
 
     this.$wrapper.modal("show");
@@ -535,16 +544,17 @@ class ModalDialog {
   }
 }
 
-async function updateSystemStatus () {
 
-  
+async function updateSystemStatus() {
+
+
   try {
 
     // System path
     const sysPath = await raveElectronAPI.getSystemPath();
 
     raveElectronAPI.replaceTextById("output-system-path", sysPath.split(/[;\:]/g).join("\n"));
-    
+
   } catch (error) {
     raveElectronAPI.replaceHtmlById("output-system-path", error);
   }
@@ -570,10 +580,10 @@ async function updateSystemStatus () {
   const check_package = async (package, elementId) => {
 
     try {
-      if( appInfo.r_version === undefined ) {
+      if (appInfo.r_version === undefined) {
         throw new Error("Cannot find R executable");
       }
-      const ver = await raveElectronAPI.getPackageVersion( package );
+      const ver = await raveElectronAPI.getPackageVersion(package);
       appInfo.library[package] = {
         version: ver
       };
@@ -584,27 +594,27 @@ async function updateSystemStatus () {
     }
   }
   // check ravemanager
-  check_package( 'rave', "output-rave-version" );
-  check_package( 'ravemanager', "output-ravemanager-version" );
-  check_package( 'raveio', "output-raveio-version" );
-  check_package( 'ravedash', "output-ravedash-version" );
-  check_package( 'ravetools', "output-ravetools-version" );
-  check_package( 'ravebuiltins', "output-ravebuiltins-version" );
-  check_package( 'threeBrain', "output-threeBrain-version" );
-  check_package( 'dipsaus', "output-dipsaus-version" );
-  check_package( 'filearray', "output-filearray-version" );
-  check_package( 'shidashi', "output-shidashi-version" );
-  check_package( 'rpymat', "output-rpymat-version" );
+  check_package('rave', "output-rave-version");
+  check_package('ravemanager', "output-ravemanager-version");
+  check_package('raveio', "output-raveio-version");
+  check_package('ravedash', "output-ravedash-version");
+  check_package('ravetools', "output-ravetools-version");
+  check_package('ravebuiltins', "output-ravebuiltins-version");
+  check_package('threeBrain', "output-threeBrain-version");
+  check_package('dipsaus', "output-dipsaus-version");
+  check_package('filearray', "output-filearray-version");
+  check_package('shidashi', "output-shidashi-version");
+  check_package('rpymat', "output-rpymat-version");
 
   const rave_updateopt = (opt, isInput = false) => {
     const elementId = `output-raveopt-${opt}`
     return new Promise((resolve, reject) => {
-      if( appInfo.r_version === undefined ) {
+      if (appInfo.r_version === undefined) {
         reject(new Error("Cannot find R executable"));
       }
       raveElectronAPI.evalRIsolate(`cat(raveio::raveio_getopt("${opt}"))`)
         .then((res) => {
-          if( isInput ) {
+          if (isInput) {
             document.getElementById(elementId).value = res.message;
           } else {
             raveElectronAPI.replaceHtmlById(elementId, res.message);
@@ -612,7 +622,7 @@ async function updateSystemStatus () {
           resolve(res.message);
         })
         .catch((err) => {
-          if( isInput ) {
+          if (isInput) {
             document.getElementById(elementId).value = "";
           } else {
             raveElectronAPI.replaceHtmlById(elementId, "");
@@ -621,20 +631,20 @@ async function updateSystemStatus () {
         })
     });
   }
-  const rave_setopt = (opt, readableName, callback = () => {}) => {
+  const rave_setopt = (opt, readableName, callback = () => { }) => {
     const elementId = `output-raveopt-${opt}`
     const $elementId = document.getElementById(elementId);
-    if($elementId) {
+    if ($elementId) {
       $elementId.addEventListener("click", () => {
         raveElectronAPI.selectDirectory({
           title: `Choose a directory for ${readableName}`,
           defaultPath: $elementId.innerText || "~/",
           properties: ["createDirectory", "openDirectory"],
         }).then((v) => {
-          if(!Array.isArray(v) || v.length === 0) { return; }
+          if (!Array.isArray(v) || v.length === 0) { return; }
           const p = v[0];
           // check if this is a legit path
-          if( raveElectronAPI.pathExists({ path: p, type: "directory" }) ) {
+          if (raveElectronAPI.pathExists({ path: p, type: "directory" })) {
             // set raveoptions
             raveElectronAPI.evalRIsolate(`raveio::raveio_setopt("${opt}", "${p}")`)
               .then(() => {
@@ -650,7 +660,7 @@ async function updateSystemStatus () {
                   callback()
                 })
               })
-            
+
           } else {
             notification.showNotification(
               `Cannot set [${readableName}]. Reason: path [${p}] does not exists as a directory`,
@@ -679,12 +689,12 @@ async function updateSystemStatus () {
   const workerNumberElement = document.getElementById("output-raveopt-max_worker");
   const workerNumberBtn = document.getElementById("output-raveopt-max_worker-btn");
   raveElectronAPI.getNCPUs().then((ncores) => {
-    if( typeof(ncores) === "number" ) {
+    if (typeof (ncores) === "number") {
       workerNumberElement.setAttribute("max", ncores)
     }
   })
   workerNumberElement.addEventListener("input", () => {
-    if( workerNumberElement.value == nWorkers ) {
+    if (workerNumberElement.value == nWorkers) {
       workerNumberBtn.innerText = "Change";
       workerNumberBtn.disabled = true;
     } else {
@@ -696,7 +706,7 @@ async function updateSystemStatus () {
     evt.preventDefault();
     let newWorkers = workerNumberElement.value;
     newWorkers = parseInt(newWorkers);
-    if( typeof newWorkers !== "number" || isNaN(newWorkers) || newWorkers <= 0 ) { return; }
+    if (typeof newWorkers !== "number" || isNaN(newWorkers) || newWorkers <= 0) { return; }
     raveElectronAPI.evalRIsolate(`raveio::raveio_setopt("max_worker", ${newWorkers})`)
       .then(() => {
         rave_updateopt("max_worker", true)
@@ -715,10 +725,10 @@ async function updateSystemStatus () {
           });
       })
   });
-  
+
 }
 
-async function launchRAVESession (session_id, args = {}) {
+async function launchRAVESession(session_id, args = {}) {
 
   const notifId = notification.showNotification(
     `Starting RAVE session...`,
@@ -731,14 +741,14 @@ async function launchRAVESession (session_id, args = {}) {
 
   const externalBrowser = args.externalBrowser === true ? true : false;
   let port = args.port;
-  if(!port) {
+  if (!port) {
     const tmp = await raveElectronAPI.evalRIsolate("cat(httpuv::randomPort())", true);
     // console.log(tmp)
     port = parseInt(tmp.message);
   }
 
   let session_id2 = session_id;
-  if( typeof session_id !== "string" ) {
+  if (typeof session_id !== "string") {
     const tmp = await raveElectronAPI.evalRIsolate(
       `
       sess <- ravedash::new_session()
@@ -746,7 +756,7 @@ async function launchRAVESession (session_id, args = {}) {
       `,
       true
     );
-    
+
     session_id2 = tmp.message.trim().split("\n");
     session_id2 = session_id2[session_id2.length - 1].trim();
 
@@ -758,9 +768,9 @@ async function launchRAVESession (session_id, args = {}) {
     launch_browser = FALSE, single_session = ${externalBrowser ? "FALSE" : "TRUE"}
   )
   `, {
-    shutdownServer : false, 
-    isolate : true, 
-    block : false
+    shutdownServer: false,
+    isolate: true,
+    block: false
   });
 
   /*
@@ -779,14 +789,14 @@ async function launchRAVESession (session_id, args = {}) {
 
   await sleep(2000);
 
-  if( externalBrowser ) {
+  if (externalBrowser) {
     raveElectronAPI.openExternalURL(url);
   } else {
     window.open(url, "_blank");
   }
 
   notification.hideNotification(notifId);
-  
+
   notification.showNotification(
     `RAVE session [${session_id2}] has been started at port [${port}].`,
     {
@@ -798,8 +808,8 @@ async function launchRAVESession (session_id, args = {}) {
 
 }
 
-function postRAVESession (session_id, append = false) {
-  if(typeof session_id !== "string") { return; }
+function postRAVESession(session_id, append = false) {
+  if (typeof session_id !== "string") { return; }
 
   const a = document.createElement("a");
   a.setAttribute("href", "#");
@@ -812,7 +822,7 @@ function postRAVESession (session_id, append = false) {
   li.appendChild(a);
   const sessionList = document.getElementById("output-session-list");
 
-  if( append ) {
+  if (append) {
     sessionList.appendChild(li);
   } else {
     sessionList.insertBefore(li, sessionList.firstChild);
@@ -822,30 +832,30 @@ function postRAVESession (session_id, append = false) {
 }
 
 function updateSessionList(add = false) {
-  if(!add) {
+  if (!add) {
     const sessionList = document.getElementById("output-session-list");
     sessionList.textContent = "";
   }
-  
+
   raveElectronAPI.evalRIsolate(`cat(sapply(ravedash::list_session(order = "ascend"), "[[", "session_id"), sep = "\n")`)
-  .then((results) => {
-    if(!results || typeof results !== "object") { return; }
-    const message = results.message;
-    if( !message || typeof message !== "string" ){ return; }
-    results.message.split("\n")
-      .map((session_id) => {
-        return( session_id.trim() );
-      })
-      .filter((session_id) => {
-        return( session_id !== "" && session_id.startsWith("session") );
-      })
-      .forEach((session_id) => {
-        postRAVESession(session_id, false);
-      })
-  });
+    .then((results) => {
+      if (!results || typeof results !== "object") { return; }
+      const message = results.message;
+      if (!message || typeof message !== "string") { return; }
+      results.message.split("\n")
+        .map((session_id) => {
+          return (session_id.trim());
+        })
+        .filter((session_id) => {
+          return (session_id !== "" && session_id.startsWith("session"));
+        })
+        .forEach((session_id) => {
+          postRAVESession(session_id, false);
+        })
+    });
 }
 
-function installRAVE () {
+function installRAVE() {
   let notifId = notification.showNotification(
     `Installing RAVE: Upgrading package manager...`,
     {
@@ -872,9 +882,9 @@ function installRAVE () {
     } else {
       ravemanager::upgrade_installer()
     }
-    `, 
+    `,
     args = {
-      isolate: true, 
+      isolate: true,
       shutdownServer: true,
       caveat: "Install/update ravemanager",
       onFinish: () => {
@@ -891,7 +901,7 @@ function installRAVE () {
         terminalConsole.addRJob(
           "ravemanager::install(finalize = FALSE)",
           args = {
-            isolate: true, 
+            isolate: true,
             shutdownServer: true,
             caveat: "Install RAVE & dependencies",
             onFinish: () => {
@@ -907,10 +917,10 @@ function installRAVE () {
               terminalConsole.addRJob(
                 'ravemanager::finalize_installation(packages = c("raveio", "threeBrain"))',
                 {
-                  isolate: true, 
+                  isolate: true,
                   shutdownServer: true,
                   caveat: "Install built-in pipelines",
-                  onFinish : () => {
+                  onFinish: () => {
                     notification.hideNotification(notifId);
                     notifId = notification.showNotification(
                       `The RAVE core has been successfully installed. You can start RAVE sessions now while the finalizing script is running...`,
@@ -927,7 +937,7 @@ function installRAVE () {
                       ravemanager::finalize_installation(packages = allPackages)
                       `,
                       {
-                        isolate: true, 
+                        isolate: true,
                         shutdownServer: true,
                         caveat: "Finalize installations",
                         onFinish: () => {
@@ -954,53 +964,7 @@ function installRAVE () {
   )
 }
 
-
-const notification = new Notification();
-const modal = new ModalDialog();
-
-$(document).ready(async function() {
-
-  // get basic information from the main process
-
-  appInfo = {
-    rscript_path: undefined,
-    r_version   : undefined,
-    library     : {}
-  };
-  
-  const terminalConsole = new TerminalConsole(
-    document.getElementById("output-terminal"),
-    document.getElementById("input-r-command")
-  );
-  window.terminalConsole = terminalConsole;
-  
-  $('[data-toggle="popover"]').popover();
-  $('a[target="_blank"][href^="http"]').click(function(evt) {
-    evt.preventDefault();
-    const href = evt.target.getAttribute("href");
-    raveElectronAPI.openExternalURL(href);
-  });
-
-  document.getElementById("toggle-terminal").addEventListener("click", () => {
-    if( document.body.classList.contains("terminal-open") ) {
-      document.body.classList.remove("terminal-open");
-    } else {
-      document.body.classList.add("terminal-open");
-    }
-  })
-
-  document.getElementById("input-install-rave").addEventListener("click", installRAVE);
-
-  $("[electron-external-link]").click(function(evt) {
-    evt.preventDefault();
-    const link = $(this).attr("electron-external-link");
-    raveElectronAPI.openExternalURL(link);
-  });
-
-  document.getElementById("input-new-session").addEventListener("click", () => {
-    launchRAVESession();
-  })
-
+function registerSSH() {
   const remoteForm = document.getElementById("input-remote-form")
   const elementHost = document.getElementById("input-remote-host");
   const elementPort = document.getElementById("input-remote-port");
@@ -1009,15 +973,15 @@ $(document).ready(async function() {
   const elementRememberUsername = document.getElementById("input-remote-remember-username");
   const elementPassword = document.getElementById("input-remote-password");
   const elementSubmit = document.getElementById("input-remote-submit");
-  
+
   remoteForm.addEventListener("submit", async (evt) => {
     evt.preventDefault();
-    
+
     // validate form
     let host = elementHost.value.trim();
-    if( host === "" ) { host = "127.0.0.1" }
+    if (host === "") { host = "127.0.0.1" }
     let sshPort = parseInt(elementPort.value);
-    if( isNaN(sshPort) ) {
+    if (isNaN(sshPort)) {
       sshPort = 22;
     } else if (sshPort < 0 || sshPort > 65535) {
       notification.showNotification(
@@ -1029,7 +993,7 @@ $(document).ready(async function() {
       return;
     }
     let ravePort = parseInt(elementRAVEPort.value);
-    if( isNaN(ravePort) ) {
+    if (isNaN(ravePort)) {
       ravePort = undefined;
     } else if (ravePort < 0 || ravePort > 65535) {
       notification.showNotification(
@@ -1067,7 +1031,7 @@ $(document).ready(async function() {
 
     try {
       await terminalConsole.addSSHJob({
-        host: host, port: sshPort, username: username, password: password, 
+        host: host, port: sshPort, username: username, password: password,
         RAVEPort: ravePort, newSession: false, leaveOpen: true
       });
     } catch (error) {
@@ -1087,7 +1051,7 @@ $(document).ready(async function() {
     elementPassword.disabled = false;
     elementSubmit.disabled = false;
 
-    
+
   })
 
   raveElectronAPI.getAppSettings(["sshHost", "sshPort", "sshRAVEPort", "username", "rememberUsername"])
@@ -1097,27 +1061,63 @@ $(document).ready(async function() {
       elementRAVEPort.value = settings.sshRAVEPort || "";
       const rem = settings.rememberUsername === false ? false : true;
       elementRememberUsername.checked = rem;
-      if( rem ) {
+      if (rem) {
         elementUsername.value = settings.username || "";
       } else if (typeof settings.username === "string" && settings.username.length > 0) {
-        raveElectronAPI.setAppSettings({username: undefined});
+        raveElectronAPI.setAppSettings({ username: undefined });
       }
     });
+}
 
 
-  // Update UI components
-  updateSystemStatus();
+const notification = new Notification();
+const modal = new ModalDialog();
+const appInfo = {
+  rscript_path: undefined,
+  r_version: undefined,
+  library: {}
+};
+const terminalConsole = new TerminalConsole(
+  document.getElementById("output-terminal"),
+  document.getElementById("input-r-command")
+);
 
-  updateSessionList();
+
+
+async function documentOnReady() {
+  $('[data-toggle="popover"]').popover();
+  $('a[target="_blank"][href^="http"]').click(function (evt) {
+    evt.preventDefault();
+    const href = evt.target.getAttribute("href");
+    raveElectronAPI.openExternalURL(href);
+  });
+
+  document.getElementById("toggle-terminal").addEventListener("click", () => {
+    if (document.body.classList.contains("terminal-open")) {
+      document.body.classList.remove("terminal-open");
+    } else {
+      document.body.classList.add("terminal-open");
+    }
+  })
+
+  document.getElementById("input-install-rave").addEventListener("click", installRAVE);
+
+  $("[electron-external-link]").click(function (evt) {
+    evt.preventDefault();
+    const link = $(this).attr("electron-external-link");
+    raveElectronAPI.openExternalURL(link);
+  });
+
+  document.getElementById("input-new-session").addEventListener("click", () => {
+    launchRAVESession();
+  })
 
   document.getElementById("input-clear-cache").addEventListener("click", () => {
 
-    
-
     modal.showModal(
-      title = "Confirmation", body = "This will clean all the RAVE sessions and cached data on the local machine only. If you have running RAVE sessions. Please close them prior to confirmation", 
-      primaryBtn = { label: "Confirm" }, 
-      secondaryBtn = {label: "Cancel"}, 
+      title = "Confirmation", body = "This will clean all the RAVE sessions and cached data on the local machine only. If you have running RAVE sessions. Please close them prior to confirmation",
+      primaryBtn = { label: "Confirm" },
+      secondaryBtn = { label: "Cancel" },
       onConfirmed = () => {
 
         const notifId = notification.showNotification(
@@ -1131,7 +1131,7 @@ $(document).ready(async function() {
           `
           raveio::clear_cached_files()
           cat("Done.")
-          `, 
+          `,
           () => {
             notification.hideNotification(notifId);
             updateSessionList();
@@ -1144,5 +1144,143 @@ $(document).ready(async function() {
       })
 
   });
+
+  registerSSH();
+
+  updateSystemStatus();
+
+  updateSessionList();
+
+}
+
+const openSetRscriptDialog = (function () {
+  const wrapper = document.createElement("div");
+  wrapper.className = "col-sm-12";
+  const p = document.createElement("p");
+  wrapper.appendChild(p);
+
+  const inputWrapper = document.createElement("div");
+  inputWrapper.className = "input-group mb-3";
+  wrapper.appendChild(inputWrapper);
+
+  const input = document.createElement("input");
+  input.className = "form-control"
+  input.setAttribute("type", "text");
+  input.setAttribute("id", "input-path-rscript");
+  input.setAttribute("placeholder", "Path to Rscript binary");
+  input.setAttribute("aria-label", "Rscript path");
+  input.setAttribute("aria-describedby", "input-path-rscript-button");
+  inputWrapper.appendChild(input);
+
+  const browseBtn = document.createElement("button");
+  browseBtn.className = "btn btn-outline-secondary";
+  browseBtn.setAttribute("type", "button");
+  browseBtn.setAttribute("id", "input-path-rscript-button");
+  browseBtn.innerText = "Browse...";
+
+  const browseBtnWrapper = document.createElement("div");
+  browseBtnWrapper.className = "input-group-append";
+  browseBtnWrapper.appendChild(browseBtn);
+  inputWrapper.appendChild(browseBtnWrapper);
+
+  browseBtn.addEventListener("click", async () => {
+    let current = input.value;
+    if( typeof current !== "string" || current.trim() == "" ) {
+      const osType = await raveElectronAPI.getOSType();
+      switch (osType) {
+        case "win32":
+          current = "C:\\";
+          break;
+        default:
+          current = "/usr/local/bin/Rscript"
+          break;
+      }
+    }
+    raveElectronAPI.selectFile({
+      title: `Select path to Rscript`,
+      defaultPath: current,
+      buttonLabel: "Confirm Rscript executable",
+      properties: ["openFile", "noResolveAliases"],
+    }).then((v) => {
+      if(!v || v.length === 0) { return; }
+      const path = v[0];
+      if( path.length > 0 && path.includes("Rscript") ) {
+        input.value = path;
+        return;
+      }
+      notification.showNotification(
+        "Please choose a valid Rscript path.",
+        {
+          type: "error"
+        }
+      );
+    })
+  })
   
+  return function(rscript) {
+    
+    if(typeof(rscript) === "string") {
+      p.innerText = "Please confirm the Rscript path below: ";
+      input.value = rscript;
+    } else {
+      p.innerText = "Unable to locate the Rscript path. Please enter the path to Rscript executable below:";
+      input.value = "";
+    }
+  
+    return new Promise((r) => {
+      modal.showModal(
+        title = "Locate Rscript",
+        body = wrapper,
+        primaryBtn = "Confirm",
+        secondaryBtn = false, 
+        onConfirmed = async () => {
+          let rscriptPath = input.value;
+          if(
+            !rscriptPath || rscriptPath.trim() == "" || 
+            ! rscriptPath.includes("Rscript") ||
+            !raveElectronAPI.pathExists(rscriptPath)
+          ) {
+            notification.showNotification(
+              "Please choose a valid Rscript path.",
+              {
+                type: "error"
+              }
+            );
+            return; 
+          }
+          console.log(rscriptPath);
+          if( rscript !== rscriptPath ) {
+            await raveElectronAPI.setAppSettings({
+              "path-cmd-Rscript": rscriptPath
+            });
+          }
+          r(rscriptPath);
+          modal.removeModal();
+        }, 
+        onShown = () => {},
+        easyClose = false
+      )
+    })
+    
+  }
+})();
+
+
+
+$(document).ready(async function () {
+
+  let rscriptPath = undefined;
+
+  try {
+    rscriptPath = await raveElectronAPI.getPathRscript();
+  } catch (error) {
+  }
+
+  if(!rscriptPath) {
+    await openSetRscriptDialog(rscriptPath);
+  }
+
+  await documentOnReady()
+
+
 });

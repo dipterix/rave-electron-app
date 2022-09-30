@@ -11,6 +11,8 @@ function sleep(ms) {
     });
 }
 
+
+
 function makeid(length) {
     var result = '';
     var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -52,7 +54,7 @@ function runTerminal(command, args = [], block = true) {
         getEnv().then((env) => {
 
             try {
-                console.log(`Shell:: ${command} ${args.join(" ")}`);
+                // console.log(`Shell:: ${command} ${args.join(" ")}`);
                 results.process = spawn(command, args, { env: env })
             } catch (error) {
                 rejects(error);
@@ -127,7 +129,12 @@ async function getEnv() {
     try {
         const env2 = await getAppSettings("env");
         if( env2 && typeof env2 === "object" ) {
-            Object.assign(env, env2);
+            for(let k in env2) {
+                env[k] = env2[k];
+            }
+            // Object.assign(env, env2);
+        } else {
+            // setAppSettings("env", env);
         }
     } catch (error) {}
     let envPath = typeof env.PATH === "string" && env.PATH.length > 0 ? env.PATH : defaultPath;

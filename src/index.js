@@ -148,7 +148,11 @@ app.whenReady().then(() => {
   ipcMain.handle('settings:set', (_, args) => {
     if(typeof args !== "object" || !args) { return; }
     for( let k in args ) {
-      rcmd.setAppSettings( `app-custom-${k}`, args[k] );
+      if(k === "path-cmd-Rscript") {
+        rcmd.setAppSettings( k, args[k] );  
+      } else {
+        rcmd.setAppSettings( `app-custom-${k}`, args[k] );
+      }
     }
   });
   ipcMain.handle('settings:get', async (_, args) => {
@@ -166,6 +170,9 @@ app.whenReady().then(() => {
 
   ipcMain.handle("system:ncpus", () => {
     return os.cpus().length;
+  });
+  ipcMain.handle("system:osType", () => {
+    return process.platform;
   });
   
   ipcMain.handle('R:evalRIsolate', async (evt, args) => {
@@ -256,9 +263,19 @@ app.whenReady().then(() => {
   ipcMain.handle('path:select-directory', async (evt, arg) => {
 
     const instance = getExtendedBWByFrameId(evt.frameId);
-    let arg2 = Object.assign(arg, {
+    let arg2 = Object.assign({
       properties: ['openDirectory']
-    });
+    }, arg);
+    const result = await dialog.showOpenDialog(instance.frame, arg2)
+    return result.filePaths;
+  })
+
+  ipcMain.handle('path:select-file', async (evt, arg) => {
+
+    const instance = getExtendedBWByFrameId(evt.frameId);
+    let arg2 = Object.assign({
+      properties: ['openFile']
+    }, arg);
     const result = await dialog.showOpenDialog(instance.frame, arg2)
     return result.filePaths;
   })

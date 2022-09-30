@@ -39,6 +39,9 @@ contextBridge.exposeInMainWorld('raveElectronAPI', {
   selectDirectory: (args = {}) => {
     return ipcRenderer.invoke('path:select-directory', args);
   },
+  selectFile: (args = {}) => {
+    return ipcRenderer.invoke('path:select-file', args);
+  },
 
   pathExists: (args) => {
     return ipcRenderer.invoke('path:exist', args);
@@ -46,6 +49,10 @@ contextBridge.exposeInMainWorld('raveElectronAPI', {
 
   getNCPUs: () => {
     return ipcRenderer.invoke('system:ncpus');
+  },
+
+  getOSType: () => {
+    return ipcRenderer.invoke('system:osType');
   },
 
   evalRIsolate: ( script, block = true, jobId = undefined ) => {
