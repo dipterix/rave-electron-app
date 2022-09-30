@@ -46,7 +46,7 @@
 
       <div class="container">
         <a href="#" class="navbar-brand" target="_blank" electron-external-link="https://rave.wiki/">
-          <img src="www/shidashi/img/icon.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3"
+          <img src="www/shidashi/img/icon.png" alt="AdminLTE Logo" class="brand-image img-rounded elevation-3"
             style="opacity: .8">
           <span class="brand-text font-weight-light">RAVE Control Center</span>
         </a>
@@ -98,32 +98,30 @@
         <div class="container">
           <div class="row">
             <div class="col-lg-6">
-              <div class="card">
+              <div class="card card-primary card-outline">
                 <div class="card-header">
                   <h5 class="card-title m-0">Quick Start</h5>
                 </div>
                 <div class="card-body">
                   <p class="card-text">
-                    Please choose from
-                    <a data-toggle="collapse" href="#output-session-list" role="button" aria-expanded="false"
-                      aria-controls="output-session-list">
-                      existing sessions
-                    </a>
-                    or start a
-                    <a href="#" id="input-new-session" role="button">
-                      new session...
+                    <a href="#" id="input-new-session" role="button" class="btn btn-primary">
+                      Click here to start a new session
                     </a>
                   </p>
-                  <ul id="output-session-list" class="collapse show overflow-y-auto max-height-250">
+                  <hr />
+                  <p class="card-text">
+                    Click from the links below to restore a previous session:
+                  </p>
+                  <ul id="output-session-list" class="overflow-y-auto max-height-250">
                   </ul>
-                </div>
-                <div class="card-footer">
-                  <a href="#" id="input-clear-cache" role="button">
-                    Clear all sessions & temporary files to free local disk space
-                  </a>
+                  <p class="card-text text-small">
+                    <a href="#" id="input-clear-cache" role="button">
+                      Clear all sessions & temporary files to free local disk space
+                    </a>
+                  </p>
                 </div>
               </div>
-              <form id="input-remote-form" class="card">
+              <form id="input-remote-form" class="card card-primary card-outline">
                 <div class="card-header">
                   <h5 class="card-title m-0">Launch RAVE on remote server</h5>
                 </div>
@@ -181,7 +179,7 @@
             </div>
 
             <div class="col-lg-6">
-              <div class="card">
+              <div class="card card-primary card-outline">
                 <div class="card-header">
                   <h5 class="card-title m-0">System Status</h5>
                 </div>
@@ -197,16 +195,18 @@
                       <tr>
                         <td>System Path</td>
                         <td>
-                          <details class="p-0 m-0">
+                          <details class="text-small p-0 m-0">
                             <summary class="p-0 m-0">Details...</summary>
-                            <div id="output-system-path" class="text-small fill-width overflow-y-auto"></div>
+                            <div id="output-system-path" class="fill-width overflow-y-auto"></div>
                           </details>
                         </td>
                       </tr>
                       <tr>
                         <td>Rscript</td>
                         <td>
-                          <code id="output-rscript-path" class="pt-0 pb-0"></code>
+                          <a id="output-rscript-path" class="pt-0 pb-0 code text-small" href="https://cran.r-project.org/" target="_blank">
+
+                          </a>
                           <span id="output-rscript-path-status"></span>
                         </td>
                       </tr>
@@ -231,6 +231,35 @@
                           <span id="output-shidashi-version"></span>
                         </td>
                       </tr>
+                      <tr>
+                        <td>Main Repository</td>
+                        <td>
+                          <a href="#" id="output-raveopt-data_dir" class="code text-small"></a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Raw Repository</td>
+                        <td>
+                          <a href="#" id="output-raveopt-raw_data_dir" class="code text-small"></a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Session Path</td>
+                        <td>
+                          <a href="#" id="output-raveopt-tensor_temp_path" class="code text-small"></a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Max Workers</td>
+                        <td class="row">
+                          <div class="form-group col-sm-8">
+                            <input type="range" class="form-control-range" id="output-raveopt-max_worker" min="1">
+                          </div>
+                          <div class="col-sm-4">
+                            <button href="#" id="output-raveopt-max_worker-btn" class="btn btn-default btn-xs" disabled>Change</button>
+                          </div>
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                   <div class="p-2 float-right">
@@ -240,12 +269,19 @@
               </div>
               <div class="card card-primary card-outline">
                 <div class="card-header">
-                  <h5 class="card-title m-0">Featured</h5>
+                  <h5 class="card-title m-0">Tutorials, Feedbacks</h5>
                 </div>
-                <div class="card-body">
-                  <h6 class="card-title">Special title treatment</h6>
-                  <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
-                  <a href="#" class="btn btn-primary">Go somewhere</a>
+                <div class="card-body pl-0">
+                  <ul>
+                    <li>Please check our documentation at <a href="https://rave.wiki/" target="_blank">https://rave.wiki</a></li>
+                    <li>
+                      Join us at our <a href="mailto:slack@rave.wiki?subject=Request to Join RAVE Slack Channel&body=Hi, RAVE:%0D%0A%0D%0AMy name is *Please enter your name*. Please add me to RAVE Slack channel.">Slack channel</a>! 
+                      (Already signed up? Click <a href="https://rave-brain.slack.com" target="_blank">here</a> to login)
+                    </li>
+                    <li>
+                      For general questions, requests, collaborations, please send us emails at <a href="mailto:help@rave.wiki">help@rave.wiki</a>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>

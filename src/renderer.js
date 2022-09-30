@@ -390,9 +390,10 @@ class TerminalConsole {
 
   async addSSHJob(config) {
     // {host: "127.0.0.1", username: "tester", password: "#Matrix9191"}
+    const jobId = makeid(11);
     const args2 = Object.assign(config, {
       resultPlaceholder: config.resultPlaceholder || "# Launching RAVE from remove server...",
-      jobId: makeid(11)
+      jobId: jobId
     });
     const item = this.addNoneBlockingStatus(`# Connecting to remote server at: ${config.host}`, args2);
     this.open();
@@ -421,6 +422,12 @@ class TerminalConsole {
           delay: 5000
         }
       )
+      this.setJobStatus(jobId, {
+        status: "error",
+        message: error.toString()
+      });
+      this.close();
+      
     }
     
     
@@ -549,14 +556,14 @@ async function updateSystemStatus () {
     const rver = await raveElectronAPI.getRVersion();
 
     raveElectronAPI.replaceTextById("output-rscript-path", rscript);
-    // raveElectronAPI.replaceHtmlById("output-rscript-path", "(Not found) Please download R from <a href='https://cran.r-project.org/' target='_blank'>https://cran.r-project.org/</a>");
+    // raveElectronAPI.replaceHtmlById("output-rscript-path", "(Not found) Please download R from https://cran.r-project.org/");
     raveElectronAPI.replaceHtmlById("output-rscript-path-status", `<span class="badge bg-success">${rver}</span>`);
 
     appInfo.rscript_path = rscript;
     appInfo.r_version = rver;
 
   } catch (error) {
-    raveElectronAPI.replaceHtmlById("output-rscript-path", "(Not found) Please download R from <a href='https://cran.r-project.org/'>https://cran.r-project.org/</a>");
+    raveElectronAPI.replaceHtmlById("output-rscript-path", "(Not found) Please download R from https://cran.r-project.org/");
     raveElectronAPI.replaceHtmlById("output-rscript-path-status", `<span class="badge bg-danger">Unknown</span>`);
   }
 
@@ -588,6 +595,127 @@ async function updateSystemStatus () {
   check_package( 'filearray', "output-filearray-version" );
   check_package( 'shidashi', "output-shidashi-version" );
   check_package( 'rpymat', "output-rpymat-version" );
+
+  const rave_updateopt = (opt, isInput = false) => {
+    const elementId = `output-raveopt-${opt}`
+    return new Promise((resolve, reject) => {
+      if( appInfo.r_version === undefined ) {
+        reject(new Error("Cannot find R executable"));
+      }
+      raveElectronAPI.evalRIsolate(`cat(raveio::raveio_getopt("${opt}"))`)
+        .then((res) => {
+          if( isInput ) {
+            document.getElementById(elementId).value = res.message;
+          } else {
+            raveElectronAPI.replaceHtmlById(elementId, res.message);
+          }
+          resolve(res.message);
+        })
+        .catch((err) => {
+          if( isInput ) {
+            document.getElementById(elementId).value = "";
+          } else {
+            raveElectronAPI.replaceHtmlById(elementId, "");
+          }
+          reject(err);
+        })
+    });
+  }
+  const rave_setopt = (opt, readableName, callback = () => {}) => {
+    const elementId = `output-raveopt-${opt}`
+    const $elementId = document.getElementById(elementId);
+    if($elementId) {
+      $elementId.addEventListener("click", () => {
+        raveElectronAPI.selectDirectory({
+          title: `Choose a directory for ${readableName}`,
+          defaultPath: $elementId.innerText || "~/",
+          properties: ["createDirectory", "openDirectory"],
+        }).then((v) => {
+          if(!Array.isArray(v) || v.length === 0) { return; }
+          const p = v[0];
+          // check if this is a legit path
+          if( raveElectronAPI.pathExists({ path: p, type: "directory" }) ) {
+            // set raveoptions
+            raveElectronAPI.evalRIsolate(`raveio::raveio_setopt("${opt}", "${p}")`)
+              .then(() => {
+                rave_updateopt(opt).then((p2) => {
+                  notification.showNotification(
+                    `[${readableName}] is set to [${p2}].`,
+                    {
+                      title: "RAVE Settings",
+                      type: "success",
+                      delay: 2000
+                    }
+                  )
+                  callback()
+                })
+              })
+            
+          } else {
+            notification.showNotification(
+              `Cannot set [${readableName}]. Reason: path [${p}] does not exists as a directory`,
+              {
+                title: "RAVE Settings",
+                type: "error"
+              }
+            )
+          }
+        });
+      })
+    }
+  }
+  rave_updateopt("data_dir");
+  rave_setopt("data_dir", "Main data repository");
+  rave_updateopt("raw_data_dir");
+  rave_setopt("raw_data_dir", "Raw data repository");
+  rave_updateopt("tensor_temp_path");
+  rave_setopt("tensor_temp_path", "Session path", updateSessionList);
+
+  let nWorkers = 1;
+  rave_updateopt("max_worker", true)
+    .then((v) => {
+      nWorkers = parseInt(v)
+    });
+  const workerNumberElement = document.getElementById("output-raveopt-max_worker");
+  const workerNumberBtn = document.getElementById("output-raveopt-max_worker-btn");
+  raveElectronAPI.getNCPUs().then((ncores) => {
+    if( typeof(ncores) === "number" ) {
+      workerNumberElement.setAttribute("max", ncores)
+    }
+  })
+  workerNumberElement.addEventListener("input", () => {
+    if( workerNumberElement.value == nWorkers ) {
+      workerNumberBtn.innerText = "Change";
+      workerNumberBtn.disabled = true;
+    } else {
+      workerNumberBtn.disabled = false;
+      workerNumberBtn.innerHTML = `Change [${workerNumberElement.value}]`
+    }
+  });
+  workerNumberBtn.addEventListener("click", (evt) => {
+    evt.preventDefault();
+    let newWorkers = workerNumberElement.value;
+    newWorkers = parseInt(newWorkers);
+    if( typeof newWorkers !== "number" || isNaN(newWorkers) || newWorkers <= 0 ) { return; }
+    raveElectronAPI.evalRIsolate(`raveio::raveio_setopt("max_worker", ${newWorkers})`)
+      .then(() => {
+        rave_updateopt("max_worker", true)
+          .then((v) => {
+            nWorkers = parseInt(v);
+            notification.showNotification(
+              `Max number of parallel workers is set to: ${v}`,
+              {
+                title: "RAVE settings",
+                type: "success",
+                delay: 2000
+              }
+            );
+            workerNumberBtn.innerText = "Change";
+            workerNumberBtn.disabled = true;
+          });
+      })
+  });
+  
 }
 
 async function launchRAVESession (session_id, args = {}) {
@@ -605,6 +733,7 @@ async function launchRAVESession (session_id, args = {}) {
   let port = args.port;
   if(!port) {
     const tmp = await raveElectronAPI.evalRIsolate("cat(httpuv::randomPort())", true);
+    // console.log(tmp)
     port = parseInt(tmp.message);
   }
 
@@ -700,13 +829,18 @@ function updateSessionList(add = false) {
   
   raveElectronAPI.evalRIsolate(`cat(sapply(ravedash::list_session(order = "ascend"), "[[", "session_id"), sep = "\n")`)
   .then((results) => {
+    if(!results || typeof results !== "object") { return; }
+    const message = results.message;
+    if( !message || typeof message !== "string" ){ return; }
     results.message.split("\n")
+      .map((session_id) => {
+        return( session_id.trim() );
+      })
       .filter((session_id) => {
-        return( session_id.trim() !== "" );
+        return( session_id !== "" && session_id.startsWith("session") );
       })
       .forEach((session_id) => {
-        const session_id2 = session_id.trim();
-        postRAVESession(session_id2, false);
+        postRAVESession(session_id, false);
       })
   });
 }
@@ -841,6 +975,11 @@ $(document).ready(async function() {
   window.terminalConsole = terminalConsole;
   
   $('[data-toggle="popover"]').popover();
+  $('a[target="_blank"][href^="http"]').click(function(evt) {
+    evt.preventDefault();
+    const href = evt.target.getAttribute("href");
+    raveElectronAPI.openExternalURL(href);
+  });
 
   document.getElementById("toggle-terminal").addEventListener("click", () => {
     if( document.body.classList.contains("terminal-open") ) {
@@ -906,7 +1045,7 @@ $(document).ready(async function() {
     const password = elementPassword.value;
     const rememberUsername = elementRememberUsername.checked;
 
-    elementPassword.value = "";
+    // elementPassword.value = "";
 
     const settings = {
       sshHost: host,
@@ -938,6 +1077,7 @@ $(document).ready(async function() {
           type: "error"
         }
       );
+      terminalConsole.close();
     }
     elementHost.disabled = false;
     elementPort.disabled = false;

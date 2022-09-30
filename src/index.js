@@ -1,8 +1,10 @@
-const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Notification, dialog } = require('electron');
 const contextMenu = require('electron-context-menu');
 const { rcmd } = require("./utils/system-command");
 const { remote } = require("./utils/remote-server");
 const path = require('path');
+const fs = require('fs');
+const os = require('os')
 
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -74,7 +76,7 @@ class ExtendedBrowserWindow {
 
     // and load the index.html of the app.
     mainWindow.loadFile(path.join(__dirname, 'welcome.html'));
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
 
     mainWindow.on('close', () => {
       this.finalize()
@@ -161,6 +163,10 @@ app.whenReady().then(() => {
     }
     return re;
   });
+
+  ipcMain.handle("system:ncpus", () => {
+    return os.cpus().length;
+  });
   
   ipcMain.handle('R:evalRIsolate', async (evt, args) => {
 
@@ -230,6 +236,33 @@ app.whenReady().then(() => {
     new Notification({ title: title, body: body }).show();
   });
 
+  ipcMain.handle('path:exist', async (_, args) => {
+
+    const fpath = args.path;
+    const ftype = args.type || "both";
+
+    if(!fs.existsSync(fpath)) { return false; }
+
+    if(ftype === "both") { return true; }
+
+    const isDir = fs.lstatSync(fpath).isDirectory();
+    if( ftype === "directory" ) {
+      return isDir;
+    } else {
+      return !isDir;
+    }
+  })
+
+  ipcMain.handle('path:select-directory', async (evt, arg) => {
+
+    const instance = getExtendedBWByFrameId(evt.frameId);
+    let arg2 = Object.assign(arg, {
+      properties: ['openDirectory']
+    });
+    const result = await dialog.showOpenDialog(instance.frame, arg2)
+    return result.filePaths;
+  })
+
   ipcMain.handle('remote:launchRAVE', async (evt, args = {}) => {
     const frame = getExtendedBWByFrameId(evt.frameId);
     if( frame ) {
@@ -264,7 +297,8 @@ app.whenReady().then(() => {
             return result;
           }
         } catch (error) {
-          throw error;
+          console.log("Unable to set job status on client UI: ");
+          console.log(error);
         }
         
       }

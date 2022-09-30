@@ -1,5 +1,7 @@
 const { Client } = require('ssh2');
 
+const MAX_MESSAGES = 5000;
+
 class RemoteSSH {
 
   _getRAVEPort () {
@@ -52,7 +54,7 @@ class RemoteSSH {
 /usr/local/bin/Rscript --no-save --no-restore -e '
 ravedash::start_session(
   new = ${this.useNewSession ? "TRUE" : "NA"}, host = "${host}", port = ${port}, 
-  jupyter = FALSE, as_job = FALSE, launch_browser = FALSE, single_session = TRUE
+  jupyter = FALSE, as_job = FALSE, launch_browser = FALSE, single_session = FALSE
 )
 '`.split("\n").join("").trim();
 
@@ -61,38 +63,44 @@ ravedash::start_session(
     return new Promise((resolve, reject) => {
 
       this.conn.exec(cmd, (err, stream) => {
-        if(err) {
-          reject(err);
-          return;
-        }
-
-        this.__stream = stream;
-        stream.on('close', (code, signal) => {
-          console.log('SSH Client :: Disconnecting remote server...');
-          
-          resolve();
-          stream.end();
-          this.disconnect()
-        })
-        stream.on('data', (data) => {
-          const buff = data.toString()
-          console.log(`SSH STDOUT :: ${buff}`);
-          this.RAVELogs.push( buff );
-          if(this.RAVELogs.length > 5000) {
-            this.RAVELogs.shift();
-          }
-        });
-        stream.stderr.on('data', (data) => {
-          const buff = data.toString()
+        if(err) { reject(err) }
+        const processSSHStream = (data) => {
+          const buff = data.toString();
           console.log(`SSH STDERR :: ${buff}`);
           this.RAVELogs.push( buff );
-          if(this.RAVELogs.length > 5000) {
+          if(this.RAVELogs.length > MAX_MESSAGES) {
             this.RAVELogs.shift();
           }
+          if( this.RAVEPort !== undefined ) {
+            // debug!!!
+            resolve({
+              host: this.conn.config.host,
+              port: this.RAVEPort
+            })
+            this.resolved = true;
+  /*
+            buff.split("\n").forEach((buf) => {
+              if( buf.trim().startsWith("createTcpServer: address already in use") ) {
+                resolve({
+                  host: this.conn.config.host,
+                  port: this.RAVEPort
+                })
+                this.resolved = true;
+              }
+            });*/
+          }
+        };
+  
+        stream.on('close', () => {
+          console.log('Stream :: close');
+          if(!this.resolved) {
+            reject("Remote program closed, but no RAVE instance was able to launch.")
+          }
+          this.disconnect();
         })
-
+        .on('data', processSSHStream)
+        .stderr.on('data', processSSHStream);
         
-
       });
     });
 
@@ -105,53 +113,42 @@ ravedash::start_session(
     this.useNewSession = useNewSession;
     this.closed = false;
 
-    this.conn
-      .on('ready', async () => {
-
-        // Connected to server
-        console.log('SSH Client :: ready');
-
-        const port = await this._getRAVEPort();
-        const host = this.conn.config.host;
-        
-        this._startSession(host, port, false);
-      })
-
+    
+    this.conn.on("close", () => {
+      this.disconnect();
+    });
   }
 
   connect(config) {
     /*
-    config = {
-      host: '127.0.0.1',
-      port: 22,
-      username: '???',
-      password: '???'
-    }
+    config = {host: '127.0.0.1', port: 22, username: '???', password: '???' }
     */
     
     return new Promise((resolve, reject) => {
 
-      this.conn.on("error", (err) => {
-        this.disconnect();
-        reject(err);
-        this.errored = true;
+      this.conn.on('ready', async () => {
+
+        // Connected to server
+        console.log('SSH Client :: ready');
+
+        try {
+          const port = await this._getRAVEPort();
+          const host = this.conn.config.host;
+          const re = await this._startSession(host, port, false)
+          console.log(re)
+          resolve(re);
+        } catch (error) {
+          reject(error);
+        }
+        return;
       })
+
+      this.conn.on('error', (err) => {
+        reject(err);
+      });
 
       this.conn.connect(config);
 
-      const check = () => {
-        if( this.errored || this.closed ) { return; }
-        if ( this.RAVEPort === undefined ) {
-          setTimeout(check, 1000);
-        } else {
-          resolve({
-            host: this.conn.config.host,
-            port: this.RAVEPort
-          })
-          return;
-        }
-      }
-      check();
     });
   }
 

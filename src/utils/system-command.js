@@ -49,9 +49,13 @@ function runTerminal(command, args = [], block = true) {
     const MAX_MESSAGES = 5000; 
     const promise = new Promise( (resolve) => {
         const defaultEnv = process.env;
+        let envPath = `${defaultEnv.HOME}/abin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/gfortran/bin:${defaultEnv.PATH}`;
+        envPath = envPath.split(/[;\\:]/g).filter((v, i, self) => {
+            return self.indexOf(v) === i;
+        }).join(":");
         
         const env = Object.assign(defaultEnv, {
-            PATH: `${defaultEnv.HOME}/abin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/gfortran/bin:${defaultEnv.PATH}`
+            PATH: envPath
         })
         const subProcess = spawn(command, args, { env: env });
         

@@ -36,6 +36,18 @@ contextBridge.exposeInMainWorld('raveElectronAPI', {
     return ipcRenderer.invoke('R:getPackageVersion', package);
   },
 
+  selectDirectory: (args = {}) => {
+    return ipcRenderer.invoke('path:select-directory', args);
+  },
+
+  pathExists: (args) => {
+    return ipcRenderer.invoke('path:exist', args);
+  },
+
+  getNCPUs: () => {
+    return ipcRenderer.invoke('system:ncpus');
+  },
+
   evalRIsolate: ( script, block = true, jobId = undefined ) => {
     return ipcRenderer.invoke('R:evalRIsolate', {
       script: script,
