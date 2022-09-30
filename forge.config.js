@@ -1,5 +1,8 @@
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
+
+const uinfo = os.userInfo();
 
 module.exports = {
   packagerConfig: {
@@ -39,29 +42,42 @@ module.exports = {
       if (options.spinner) {
         options.spinner.info(`Completed packaging for ${options.platform} / ${options.arch} at ${options.outputPaths[0]}`);
       }
-      switch (options.platform) {
-        case "darwin":
-          const appName = "rave-2.0.app";
-          const targetPath = path.join("/Applications/RAVE/", appName);
-          if(!fs.existsSync(targetPath)) {
-            fs.mkdirSync(targetPath)
-          }
-          
-          fs.cpSync(
-            path.join(options.outputPaths[0], appName), 
-            targetPath,
-            {
-              force: true,
-              recursive: true,
-              verbatimSymlinks: false,
-              dereference: false
+      try {
+        switch (options.platform) {
+          case "darwin":
+            const appName = "rave-2.0.app";
+  
+            const targetPath = path.join(uinfo.homedir, "Downloads", "RAVE");
+            
+            
+            if(!fs.existsSync(targetPath)) {
+              fs.mkdirSync(targetPath)
             }
-          );
-          break;
-      
-        default:
-          break;
+            const appDir = path.join(targetPath, appName);
+            if(fs.existsSync(appDir)) {
+              fs.rmSync(appDir, { recursive: true, force: true });
+            }
+            fs.mkdirSync(appDir)
+            
+            fs.cpSync(
+              path.join(options.outputPaths[0], appName), 
+              appDir,
+              {
+                force: true,
+                recursive: true,
+                verbatimSymlinks: false,
+                dereference: false
+              }
+            );
+            break;
+        
+          default:
+            break;
+        }
+      } catch (error) {
+        
       }
+      
     }
   }
 }
