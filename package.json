@@ -1,5 +1,5 @@
 {
-  "name": "@rave-ieeg/rave-2.0",
+  "name": "rave-2.0",
   "productName": "rave-2.0",
   "version": "1.0.0",
   "description": "R Analysis & Visualization for iEEG",
@@ -28,14 +28,40 @@
     "nan": "github:jkleinsc/nan#remove_accessor_signature"
   },
   "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.66",
-    "@electron-forge/maker-deb": "^6.0.0-beta.66",
-    "@electron-forge/maker-rpm": "^6.0.0-beta.66",
-    "@electron-forge/maker-squirrel": "^6.0.0-beta.66",
-    "@electron-forge/maker-zip": "^6.0.0-beta.66",
-    "electron-nightly": "^22.0.0-nightly.20220922"
+    "@electron-forge/cli": "^6.1.1",
+    "@electron-forge/maker-deb": "^6.1.1",
+    "@electron-forge/maker-rpm": "^6.1.1",
+    "@electron-forge/maker-squirrel": "^6.1.1",
+    "@electron-forge/maker-zip": "^6.1.1",
+    "electron": "^24.1.2"
   },
   "config": {
-    "forge": "./forge.config.js"
+    "forge": {
+      "packagerConfig": {
+        "icon": "src/www/favicon.ico"
+      },
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "rave_2.0"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
   }
 }

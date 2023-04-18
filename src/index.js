@@ -27,7 +27,7 @@ class ExtendedBrowserWindow {
 
     // Create the browser window.
     const mainWindow = new BrowserWindow({
-      width: width > 1000 ? 1000 : width,
+      width: width,
       height: height,
       // useContentSize: true,
       title: "R Analysis & Visualization of iEEG",
@@ -173,9 +173,6 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("system:osType", () => {
     return process.platform;
-  });
-  ipcMain.handle("system:osArch", () => {
-    return process.arch;
   });
   
   ipcMain.handle('R:evalRIsolate', async (evt, args) => {

@@ -138,7 +138,7 @@ async function getEnv() {
         }
     } catch (error) {}
     let envPath = typeof env.PATH === "string" && env.PATH.length > 0 ? env.PATH : defaultPath;
-    envPath = envPath.split(path.delimiter).filter((v, i, self) => {
+    envPath = envPath.split(/[;\\:]/g).filter((v, i, self) => {
         return self.indexOf(v) === i;
     }).join(path.delimiter);
     env.PATH = envPath;
